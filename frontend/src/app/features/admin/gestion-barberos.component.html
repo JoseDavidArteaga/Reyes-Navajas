@@ -1,0 +1,151 @@
+<div class="max-w-6xl mx-auto p-6">
+  <div class="mb-8 flex justify-between items-center">
+    <div>
+      <h1 class="text-3xl font-display font-bold text-gray-100 mb-2">
+        Gestión de Barberos
+      </h1>
+      <p class="text-gray-400">
+        Administra el equipo de barberos de Reyes & Navajas
+      </p>
+    </div>
+    <button 
+      (click)="openCreateModal()"
+      class="btn-primary">
+      Nuevo Barbero
+    </button>
+  </div>
+
+  <div *ngIf="barberoService.isLoading(); else contentTemplate">
+    <app-loading-spinner message="Cargando barberos..."></app-loading-spinner>
+  </div>
+
+  <ng-template #contentTemplate>
+    <div class="card">
+      <!-- Tabla de barberos -->
+      <div class="overflow-x-auto">
+        <table class="table">
+          <thead class="table-header">
+            <tr>
+              <th class="table-header-cell">Barbero</th>
+              <th class="table-header-cell">Especialidades</th>
+              <th class="table-header-cell">Estado</th>
+              <th class="table-header-cell">Calificación</th>
+              <th class="table-header-cell">Servicios</th>
+              <th class="table-header-cell">Acciones</th>
+            </tr>
+          </thead>
+          <tbody class="table-body">
+            <tr *ngFor="let barbero of barberoService.barberos(); trackBy: trackByBarberoId">
+              <td class="table-cell">
+                <div class="flex items-center">
+                  <div class="w-10 h-10 bg-barberia-gold bg-opacity-20 rounded-full flex items-center justify-center mr-3">
+                    <span class="text-barberia-gold font-semibold">
+                      {{ barbero.nombre.charAt(0) }}
+                    </span>
+                  </div>
+                  <div>
+                    <div class="font-medium text-gray-100">{{ barbero.nombre }}</div>
+                    <div class="text-sm text-gray-400" *ngIf="barbero.telefono">{{ barbero.telefono }}</div>
+                  </div>
+                </div>
+              </td>
+              <td class="table-cell">
+                <div class="flex flex-wrap gap-1">
+                  <span 
+                    *ngFor="let especialidad of barbero.especialidades; trackBy: trackByEspecialidad"
+                    class="px-2 py-1 bg-barberia-gold bg-opacity-20 text-barberia-gold text-xs rounded">
+                    {{ especialidad }}
+                  </span>
+                </div>
+              </td>
+              <td class="table-cell">
+                <span [class]="getEstadoBadgeClass(barbero.estado)">
+                  {{ barbero.estado }}
+                </span>
+              </td>
+              <td class="table-cell">
+                <div class="flex items-center" *ngIf="barbero.calificacionPromedio; else noRating">
+                  <span class="text-yellow-400 mr-1">★</span>
+                  <span>{{ barbero.calificacionPromedio }}</span>
+                </div>
+                <ng-template #noRating>
+                  <span class="text-gray-500">N/A</span>
+                </ng-template>
+              </td>
+              <td class="table-cell">
+                {{ barbero.totalServicios || 0 }}
+              </td>
+              <td class="table-cell">
+                <div class="flex space-x-2">
+                  <button 
+                    (click)="editBarbero(barbero)"
+                    class="text-blue-400 hover:text-blue-300 text-sm">
+                    Editar
+                  </button>
+                  <button 
+                    (click)="toggleEstado(barbero)"
+                    [class]="barbero.estado === 'ACTIVO' ? 'text-red-400 hover:text-red-300' : 'text-green-400 hover:text-green-300'"
+                    class="text-sm">
+                    {{ barbero.estado === 'ACTIVO' ? 'Desactivar' : 'Activar' }}
+                  </button>
+                </div>
+              </td>
+            </tr>
+            <!-- Empty state -->
+            <tr *ngIf="barberoService.barberos().length === 0">
+              <td colspan="6" class="table-cell text-center py-8">
+                <div class="text-gray-400">
+                  No hay barberos registrados
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </ng-template>
+
+  <!-- Modal para crear/editar barbero -->
+  <app-modal 
+    [isOpen]="showModal()"
+    [title]="isEditing() ? 'Editar Barbero' : 'Nuevo Barbero'"
+    (close)="closeModal()"
+    (confirm)="saveBarbero()">
+    
+    <form [formGroup]="barberoForm" class="space-y-4">
+      <div class="form-group">
+        <label class="form-label">Nombre</label>
+        <input
+          type="text"
+          formControlName="nombre"
+          class="form-input"
+          placeholder="Nombre del barbero">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Teléfono</label>
+        <input
+          type="tel"
+          formControlName="telefono"
+          class="form-input"
+          placeholder="Número de teléfono">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Especialidades</label>
+        <div class="space-y-2">
+          <label 
+            *ngFor="let especialidad of especialidadesDisponibles; trackBy: trackByEspecialidad"
+            class="flex items-center">
+            <input
+              type="checkbox"
+              [value]="especialidad"
+              (change)="onEspecialidadChange($event, especialidad)"
+              class="mr-2 rounded text-barberia-gold">
+            <span class="text-gray-300">{{ especialidad }}</span>
+          </label>
+        </div>
+      </div>
+    </form>
+  </app-modal>
+</div>

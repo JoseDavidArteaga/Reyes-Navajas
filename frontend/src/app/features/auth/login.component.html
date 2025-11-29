@@ -1,0 +1,125 @@
+<div class="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-barberia-pattern">
+  <div class="max-w-md w-full space-y-8">
+    <!-- Logo y título -->
+    <div class="text-center">
+      <div class="flex justify-center">
+        <div class="w-16 h-16 bg-barberia-gold rounded-full flex items-center justify-center">
+          <span class="text-barberia-dark font-bold text-2xl">R</span>
+        </div>
+      </div>
+      <h2 class="mt-6 text-3xl font-display font-bold text-gray-100">
+        Iniciar Sesión
+      </h2>
+      <p class="mt-2 text-sm text-gray-400">
+        Ingresa a tu cuenta en Reyes & Navajas
+      </p>
+    </div>
+
+    <!-- Formulario -->
+    <div class="card">
+      <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="space-y-6">
+        <!-- Campo Teléfono -->
+        <div class="form-group">
+          <label for="telefono" class="form-label">
+            Número de Celular
+          </label>
+          <input
+            id="telefono"
+            name="telefono"
+            type="tel"
+            formControlName="telefono"
+            class="form-input"
+            placeholder="Ej: 3001234567"
+            [class.border-red-500]="isFieldInvalid('telefono')">
+          
+          <div class="form-error" *ngIf="isFieldInvalid('telefono')">
+            <span *ngIf="loginForm.get('telefono')?.errors?.['required']; else telefonoPatternError">
+              El número de celular es requerido
+            </span>
+            <ng-template #telefonoPatternError>
+              <span *ngIf="loginForm.get('telefono')?.errors?.['pattern']">
+                Ingresa un número válido (10 dígitos)
+              </span>
+            </ng-template>
+          </div>
+        </div>
+
+        <!-- Campo Contraseña -->
+        <div class="form-group">
+          <label for="password" class="form-label">
+            Contraseña
+          </label>
+          <input
+            id="password"
+            name="password"
+            type="password"
+            formControlName="password"
+            class="form-input"
+            placeholder="Tu contraseña"
+            [class.border-red-500]="isFieldInvalid('password')">
+          
+          <div class="form-error" *ngIf="isFieldInvalid('password')">
+            <span *ngIf="loginForm.get('password')?.errors?.['required']; else passwordMinLengthError">
+              La contraseña es requerida
+            </span>
+            <ng-template #passwordMinLengthError>
+              <span *ngIf="loginForm.get('password')?.errors?.['minlength']">
+                La contraseña debe tener al menos 6 caracteres
+              </span>
+            </ng-template>
+          </div>
+        </div>
+
+        <!-- Botón submit -->
+        <div>
+          <button
+            type="submit"
+            [disabled]="loginForm.invalid || authService.isLoading()"
+            class="w-full btn-primary flex justify-center items-center py-3">
+            
+            <div *ngIf="authService.isLoading(); else loginText">
+              <app-loading-spinner size="small"></app-loading-spinner>
+              <span class="ml-2">Iniciando sesión...</span>
+            </div>
+            <ng-template #loginText>
+              Iniciar Sesión
+            </ng-template>
+          </button>
+        </div>
+
+        <!-- Enlaces adicionales -->
+        <div class="text-center">
+          <p class="text-sm text-gray-400">
+            ¿No tienes cuenta?
+            <a routerLink="/registro" class="text-barberia-gold hover:text-barberia-goldLight font-medium">
+              Regístrate aquí
+            </a>
+          </p>
+        </div>
+      </form>
+
+      <!-- Cuentas de prueba -->
+      <div class="mt-6 pt-6 border-t border-gray-700">
+        <p class="text-xs text-gray-500 mb-3">Cuentas de prueba:</p>
+        <div class="space-y-2 text-xs text-gray-400">
+          <div class="flex justify-between">
+            <span>Admin:</span>
+            <code class="bg-gray-700 px-2 py-1 rounded">3001234567</code>
+          </div>
+          <div class="flex justify-between">
+            <span>Barbero:</span>
+            <code class="bg-gray-700 px-2 py-1 rounded">3002345678</code>
+          </div>
+          <div class="flex justify-between">
+            <span>Cliente:</span>
+            <code class="bg-gray-700 px-2 py-1 rounded">3004567890</code>
+          </div>
+          <div class="text-center mt-2">
+            <span>Contraseña para todos: </span>
+            <code class="bg-gray-700 px-2 py-1 rounded">123456</code>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

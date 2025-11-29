@@ -1,0 +1,44 @@
+/* Estilos generales */
+.bg-barberia-darker {
+  background-color: #0d0d0d;
+}
+
+/* Patrones personalizados (si usas Tailwind, puedes omitir) */
+.bg-barberia-pattern {
+  background-image: url('/assets/img/pattern.png');
+  background-size: cover;
+  background-position: center;
+}
+
+/* Botones */
+.btn-primary {
+  @apply bg-barberia-gold text-black font-semibold rounded-lg shadow px-4 py-2 hover:bg-yellow-500 transition;
+}
+
+.btn-secondary {
+  @apply border border-barberia-gold text-barberia-gold rounded-lg px-4 py-2 font-semibold hover:bg-barberia-gold hover:text-black transition;
+}
+
+/* Cards */
+.card {
+  @apply bg-gray-800 p-6 rounded-xl shadow-lg;
+}
+
+.shadow-xl-gold {
+  box-shadow: 0 10px 25px rgba(255, 215, 0, 0.25);
+}
+
+/* Textos destacados */
+.text-barberia-gold {
+  color: #d4af37;
+}
+
+/* Fondos */
+.bg-barberia-gold {
+  background-color: #d4af37;
+}
+
+/* Hover transitions */
+.hover\:shadow-xl-gold:hover {
+  box-shadow: 0 15px 30px rgba(255, 215, 0, 0.4);
+}

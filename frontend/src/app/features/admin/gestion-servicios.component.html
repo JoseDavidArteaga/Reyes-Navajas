@@ -1,0 +1,170 @@
+<div class="max-w-6xl mx-auto p-6">
+  <div class="mb-8 flex justify-between items-center">
+    <div>
+      <h1 class="text-3xl font-display font-bold text-gray-100 mb-2">
+        Gestión de Servicios
+      </h1>
+      <p class="text-gray-400">
+        Administra los servicios ofrecidos en la barbería
+      </p>
+    </div>
+    <button 
+      (click)="openCreateModal()"
+      class="btn-primary">
+      Nuevo Servicio
+    </button>
+  </div>
+
+  <div *ngIf="servicioService.isLoading(); else contentTemplate">
+    <app-loading-spinner message="Cargando servicios..."></app-loading-spinner>
+  </div>
+
+  <ng-template #contentTemplate>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div 
+        *ngFor="let servicio of servicioService.servicios(); trackBy: trackByServicioId"
+        class="card hover:shadow-xl-gold transition-shadow">
+        <div class="flex justify-between items-start mb-4">
+          <h3 class="text-xl font-semibold text-gray-100">
+            {{ servicio.nombre }}
+          </h3>
+          <span [class]="getStatusBadgeClass(servicio.activo)">
+            {{ servicio.activo ? 'Activo' : 'Inactivo' }}
+          </span>
+        </div>
+        
+        <p class="text-gray-400 mb-4">
+          {{ servicio.descripcion }}
+        </p>
+        
+        <div class="space-y-2 mb-4">
+          <div class="flex justify-between">
+            <span class="text-gray-400">Duración:</span>
+            <span class="text-gray-100">{{ servicio.duracion }} min</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-gray-400">Precio:</span>
+            <span class="text-barberia-gold font-semibold">
+              \${{ servicio.precio | number }}
+            </span>
+          </div>
+          <div class="flex justify-between" *ngIf="servicio.categoria">
+            <span class="text-gray-400">Categoría:</span>
+            <span class="text-gray-100">{{ servicio.categoria }}</span>
+          </div>
+        </div>
+        
+        <div class="flex space-x-2">
+          <button 
+            (click)="editServicio(servicio)"
+            class="btn-secondary flex-1 text-sm">
+            Editar
+          </button>
+          <button 
+            (click)="toggleEstado(servicio)"
+            [class]="servicio.activo ? 'btn-danger' : 'btn-primary'"
+            class="flex-1 text-sm">
+            {{ servicio.activo ? 'Desactivar' : 'Activar' }}
+          </button>
+        </div>
+      </div>
+      
+      <!-- Empty state -->
+      <div class="col-span-full text-center py-12" *ngIf="servicioService.servicios().length === 0">
+        <div class="text-6xl mb-4 opacity-50">💇‍♂️</div>
+        <p class="text-gray-400">
+          No hay servicios registrados
+        </p>
+      </div>
+    </div>
+  </ng-template>
+
+  <!-- Modal para crear/editar servicio -->
+  <app-modal 
+    [isOpen]="showModal()"
+    [title]="isEditing() ? 'Editar Servicio' : 'Nuevo Servicio'"
+    (close)="closeModal()"
+    (confirm)="saveServicio()">
+    
+    <form [formGroup]="servicioForm" class="space-y-4">
+      <div class="form-group">
+        <label class="form-label">Nombre del Servicio</label>
+        <input
+          type="text"
+          formControlName="nombre"
+          class="form-input"
+          placeholder="Ej: Corte Clásico">
+        <div class="form-error" *ngIf="isFieldInvalid('nombre')">
+          El nombre es requerido
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Descripción</label>
+        <textarea
+          formControlName="descripcion"
+          rows="3"
+          class="form-input"
+          placeholder="Describe el servicio...">
+        </textarea>
+        <div class="form-error" *ngIf="isFieldInvalid('descripcion')">
+          La descripción es requerida
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-4">
+        <div class="form-group">
+          <label class="form-label">Duración (minutos)</label>
+          <input
+            type="number"
+            formControlName="duracion"
+            class="form-input"
+            placeholder="45"
+            min="30">
+          <div class="form-error" *ngIf="isFieldInvalid('duracion')">
+            <span *ngIf="servicioForm.get('duracion')?.errors?.['required']; else minDurationError">
+              La duración es requerida
+            </span>
+            <ng-template #minDurationError>
+              <span *ngIf="servicioForm.get('duracion')?.errors?.['min']">
+                Mínimo 30 minutos
+              </span>
+            </ng-template>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Precio</label>
+          <input
+            type="number"
+            formControlName="precio"
+            class="form-input"
+            placeholder="25000"
+            min="1000">
+          <div class="form-error" *ngIf="isFieldInvalid('precio')">
+            <span *ngIf="servicioForm.get('precio')?.errors?.['required']; else minPriceError">
+              El precio es requerido
+            </span>
+            <ng-template #minPriceError>
+              <span *ngIf="servicioForm.get('precio')?.errors?.['min']">
+                Precio mínimo \$1,000
+              </span>
+            </ng-template>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Categoría</label>
+        <select formControlName="categoria" class="form-input">
+          <option value="">Selecciona una categoría</option>
+          <option 
+            *ngFor="let categoria of categorias; trackBy: trackByCategoria"
+            [value]="categoria">
+            {{ categoria }}
+          </option>
+        </select>
+      </div>
+    </form>
+  </app-modal>
+</div>

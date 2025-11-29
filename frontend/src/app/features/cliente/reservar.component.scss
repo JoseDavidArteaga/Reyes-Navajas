@@ -1,0 +1,35 @@
+.step-container {
+  @apply mb-8 p-6 bg-gray-800 rounded-lg border border-gray-700;
+}
+
+.step-header {
+  @apply flex items-center space-x-3;
+}
+
+.step-number {
+  @apply w-8 h-8 bg-gray-700 text-gray-400 rounded-full flex items-center justify-center text-sm font-semibold;
+}
+
+.step-number.active {
+  @apply bg-barberia-gold text-gray-900;
+}
+
+.service-card, .barbero-card {
+  @apply bg-gray-800 border border-gray-700 rounded-lg hover:border-barberia-gold/50 transition-all cursor-pointer;
+}
+
+.service-card.selected, .barbero-card.selected {
+  @apply border-barberia-gold bg-barberia-gold/10;
+}
+
+.time-button {
+  @apply p-2 text-sm bg-gray-800 border border-gray-700 rounded hover:border-barberia-gold/50 transition-all;
+}
+
+.time-button.selected {
+  @apply bg-barberia-gold text-gray-900 border-barberia-gold;
+}
+
+.time-button:disabled {
+  @apply opacity-50 cursor-not-allowed;
+}

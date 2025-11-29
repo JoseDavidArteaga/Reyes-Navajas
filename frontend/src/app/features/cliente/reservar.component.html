@@ -1,0 +1,200 @@
+<div class="max-w-4xl mx-auto p-6">
+  <div class="mb-8">
+    <h1 class="text-3xl font-display font-bold text-gray-100 mb-2">
+      Reservar Cita
+    </h1>
+    <p class="text-gray-400">
+      Selecciona un servicio, barbero y horario para tu cita
+    </p>
+  </div>
+
+  <form [formGroup]="reservaForm" (ngSubmit)="onSubmit()">
+    <!-- Paso 1: Selección de servicio -->
+    <div class="step-container">
+      <div class="step-header">
+        <span class="step-number" [class.active]="currentStep() >= 1">1</span>
+        <h2 class="text-xl font-semibold text-gray-100">Selecciona un Servicio</h2>
+      </div>
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
+        <div 
+          *ngFor="let servicio of servicios(); trackBy: trackByServicioId"
+          class="service-card"
+          [class.selected]="selectedService()?.id === servicio.id"
+          (click)="selectService(servicio)">
+          <div class="p-4">
+            <h3 class="text-lg font-semibold text-gray-100 mb-2">
+              {{ servicio.nombre }}
+            </h3>
+            <p class="text-gray-400 text-sm mb-3">
+              {{ servicio.descripcion }}
+            </p>
+            <div class="flex justify-between items-center">
+              <span class="text-barberia-gold font-semibold">
+                ${{ servicio.precio }}
+              </span>
+              <span class="text-sm text-gray-500">
+                {{ servicio.duracion }} min
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Paso 2: Selección de barbero -->
+    <div class="step-container" *ngIf="currentStep() >= 2">
+      <div class="step-header">
+        <span class="step-number active">2</span>
+        <h2 class="text-xl font-semibold text-gray-100">Selecciona tu Barbero</h2>
+      </div>
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
+        <div 
+          *ngFor="let barbero of barberosDisponibles(); trackBy: trackByBarberoId"
+          class="barbero-card"
+          [class.selected]="selectedBarbero()?.id === barbero.id"
+          (click)="selectBarbero(barbero)">
+          <div class="p-4">
+            <h3 class="text-lg font-semibold text-gray-100 mb-2">
+              {{ barbero.nombre }}
+            </h3>
+            <p class="text-gray-400 text-sm mb-2">
+              {{ barbero.especialidades?.join(', ') }}
+            </p>
+            <div class="flex items-center">
+              <div class="flex items-center">
+                <svg 
+                  *ngFor="let i of [1,2,3,4,5]; trackBy: trackByIndex"
+                  class="w-4 h-4" 
+                  [class]="i <= (barbero.rating || 0) ? 'text-barberia-gold' : 'text-gray-600'" 
+                  fill="currentColor" 
+                  viewBox="0 0 20 20">
+                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                </svg>
+                <span class="text-sm text-gray-400 ml-2">({{ barbero.rating || 0 }})</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Paso 3: Selección de fecha y hora -->
+    <div class="step-container" *ngIf="currentStep() >= 3">
+      <div class="step-header">
+        <span class="step-number active">3</span>
+        <h2 class="text-xl font-semibold text-gray-100">Fecha y Hora</h2>
+      </div>
+      
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+        <!-- Selección de fecha -->
+        <div class="card">
+          <label class="form-label">Fecha de la cita</label>
+          <input 
+            type="date"
+            formControlName="fecha"
+            class="form-input"
+            [min]="minDate"
+            [max]="maxDate">
+          <p class="form-error" *ngIf="reservaForm.get('fecha')?.touched && reservaForm.get('fecha')?.errors">Selecciona una fecha válida</p>
+        </div>
+
+        <!-- Selección de hora -->
+        <div class="card">
+          <label class="form-label">Hora de la cita</label>
+          <div class="grid grid-cols-3 gap-2">
+            <button
+              *ngFor="let hora of horasDisponibles(); trackBy: trackByHora"
+              type="button"
+              class="time-button"
+              [class.selected]="selectedTime() === hora"
+              (click)="selectTime(hora)"
+              [disabled]="!isTimeAvailable(hora)">
+              {{ hora }}
+            </button>
+          </div>
+          <p class="form-error" *ngIf="reservaForm.get('hora')?.touched && reservaForm.get('hora')?.errors">Selecciona una hora</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Paso 4: Confirmación -->
+    <div class="step-container" *ngIf="currentStep() >= 4">
+      <div class="step-header">
+        <span class="step-number active">4</span>
+        <h2 class="text-xl font-semibold text-gray-100">Confirmación</h2>
+      </div>
+      
+      <div class="card mt-6">
+        <h3 class="text-lg font-semibold text-gray-100 mb-4">Resumen de tu cita</h3>
+        
+        <div class="space-y-3">
+          <div class="flex justify-between">
+            <span class="text-gray-400">Servicio:</span>
+            <span class="text-gray-100">{{ selectedService()?.nombre }}</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-gray-400">Barbero:</span>
+            <span class="text-gray-100">{{ selectedBarbero()?.nombre }}</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-gray-400">Fecha:</span>
+            <span class="text-gray-100">{{ formatDate(reservaForm.get('fecha')?.value) }}</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-gray-400">Hora:</span>
+            <span class="text-gray-100">{{ selectedTime() }}</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-gray-400">Duración:</span>
+            <span class="text-gray-100">{{ selectedService()?.duracion }} min</span>
+          </div>
+        </div>
+
+        <div class="pt-4 border-t border-gray-700">
+          <div class="flex justify-between items-center">
+            <span class="text-lg font-semibold text-gray-100">Total:</span>
+            <span class="text-2xl font-bold text-barberia-gold">
+              ${{ getSelectedServicePrice() }}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Botones de navegación -->
+    <div class="flex justify-between mt-8 pt-6 border-t border-gray-700">
+      <button
+        type="button"
+        class="btn-secondary"
+        (click)="previousStep()"
+        [disabled]="currentStep() === 1">
+        Anterior
+      </button>
+
+      <button
+        *ngIf="currentStep() < 4"
+        type="button"
+        class="btn-primary"
+        (click)="nextStep()"
+        [disabled]="!isStepValid(currentStep())">
+        Siguiente
+      </button>
+      
+      <button
+        *ngIf="currentStep() >= 4"
+        type="submit"
+        class="btn-primary"
+        [disabled]="!reservaForm.valid || isLoading()">
+        <svg *ngIf="isLoading()" class="animate-spin h-4 w-4 mr-2" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        Confirmar Reserva
+      </button>
+    </div>
+  </form>
+
+  <app-loading-spinner *ngIf="isLoading()"></app-loading-spinner>
+</div>
