@@ -1,7 +1,8 @@
-import { Component, ChangeDetectionStrategy } from '@angular/core';
+import { Component, ChangeDetectionStrategy, OnInit, OnDestroy, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
-import { AuthService } from '../../core';
+import { AuthService, ThreeSceneService } from '../../core';
+import * as THREE from 'three';
 
 @Component({
   selector: 'app-home',
@@ -11,9 +12,19 @@ import { AuthService } from '../../core';
   styleUrls: ['./home.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class HomeComponent {
+export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
+  @ViewChild('statueContainer', { static: false }) statueContainer!: ElementRef<HTMLDivElement>;
+  
+  private scene: THREE.Scene | null = null;
+  private camera: THREE.PerspectiveCamera | null = null;
+  private renderer: THREE.WebGLRenderer | null = null;
+  private animationId: number | null = null;
+  private animateFunction: (() => void) | null = null;
 
-  constructor(public authService: AuthService) {}
+  constructor(
+    public authService: AuthService,
+    private threeSceneService: ThreeSceneService
+  ) {}
 
   servicios = [
     {
@@ -88,4 +99,48 @@ export class HomeComponent {
       icon: '🏠'
     }
   ];
+
+  ngOnInit(): void {
+    // Inicialización del componente
+  }
+
+  ngAfterViewInit(): void {
+    this.initializeStatue();
+  }
+
+  ngOnDestroy(): void {
+    this.cleanupThreeJs();
+  }
+
+  private initializeStatue(): void {
+    if (this.statueContainer?.nativeElement) {
+      this.threeSceneService.createStatueScene(
+        this.statueContainer.nativeElement
+      ).then((sceneData) => {
+        this.scene = sceneData.scene;
+        this.camera = sceneData.camera;
+        this.renderer = sceneData.renderer;
+        this.animateFunction = sceneData.animate;
+        
+        // Iniciar animación
+        this.animateFunction();
+      }).catch((error) => {
+        console.error('Error inicializando la escena 3D:', error);
+      });
+    }
+  }
+
+  private cleanupThreeJs(): void {
+    if (this.animationId) {
+      cancelAnimationFrame(this.animationId);
+    }
+    
+    if (this.renderer) {
+      this.renderer.dispose();
+    }
+    
+    if (this.scene) {
+      this.scene.clear();
+    }
+  }
 }

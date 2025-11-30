@@ -42,3 +42,50 @@
 .hover\:shadow-xl-gold:hover {
   box-shadow: 0 15px 30px rgba(255, 215, 0, 0.4);
 }
+
+/* Estilos para el contenedor 3D como fondo */
+#statueContainer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+#statueContainer canvas {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover;
+}
+
+/* Mejorar legibilidad del texto sobre la estatua */
+#inicio h1 {
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
+}
+
+#inicio p {
+  text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.6);
+}
+
+/* Asegurar que los botones estén por encima */
+.btn-primary, .btn-secondary {
+  position: relative;
+  z-index: 20;
+  backdrop-filter: blur(1px);
+}
+
+/* Overlay sutil para mejorar contraste */
+#inicio::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(0, 0, 0, 0.3) 0%, rgba(0, 0, 0, 0.1) 50%, rgba(0, 0, 0, 0.3) 100%);
+  z-index: 5;
+  pointer-events: none;
+}

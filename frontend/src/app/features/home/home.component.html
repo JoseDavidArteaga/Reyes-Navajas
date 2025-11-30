@@ -1,15 +1,21 @@
 <div class="bg-barberia-darker">
 
   <!-- Sección Inicio -->
-  <section id="inicio" class="relative bg-barberia-pattern py-20 lg:py-32">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+  <section id="inicio" class="relative bg-barberia-pattern py-20 lg:py-32 overflow-hidden">
+    <!-- Contenedor de la estatua 3D como fondo -->
+    <div #statueContainer class="absolute inset-0 w-full h-full opacity-50 pointer-events-none">
+      <!-- La estatua 3D se renderizará aquí como fondo -->
+    </div>
+    
+    <!-- Contenido principal -->
+    <div class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div class="text-center">
-        <h1 class="text-4xl md:text-6xl font-display font-bold text-gray-100 mb-6">
+        <h1 class="text-4xl md:text-6xl font-display font-bold text-gray-100 mb-6 drop-shadow-lg">
           Bienvenido a 
           <span class="text-barberia-gold">Reyes & Navajas</span>
         </h1>
 
-        <p class="text-xl md:text-2xl text-gray-300 mb-8 max-w-3xl mx-auto">
+        <p class="text-xl md:text-2xl text-gray-300 mb-8 max-w-3xl mx-auto drop-shadow-md">
           La mejor barbería de la ciudad. Tradición, estilo y profesionalismo en cada servicio.
         </p>
 
@@ -46,7 +52,7 @@
   </section>
 
   <!-- Services Section -->
-  <section class="py-16 lg:py-24">
+  <section class="pt-40 pb-16 lg:pt-48 lg:pb-24">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div class="text-center mb-16">
         <h2 class="text-3xl md:text-4xl font-display font-bold text-gray-100 mb-4">
