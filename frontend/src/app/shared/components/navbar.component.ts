@@ -1,8 +1,9 @@
-import { Component, signal, ChangeDetectionStrategy } from '@angular/core';
+import { Component, signal, ChangeDetectionStrategy, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule, Router } from '@angular/router';
+import { RouterModule, Router, NavigationEnd } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
 import { UserRole } from '../../core/interfaces';
+import { filter, Subject, takeUntil } from 'rxjs';
 
 @Component({
   selector: 'app-navbar',
@@ -75,7 +76,7 @@ import { UserRole } from '../../core/interfaces';
               </div>
             } @else {
               <!-- Navegación para visitantes -->
-              @if (isHomePage) {
+              @if (isHomePage()) {
                 <a class="nav-link cursor-pointer" (click)="scrollToSection('inicio')">
                   Inicio
                 </a>
@@ -176,7 +177,7 @@ import { UserRole } from '../../core/interfaces';
               Cerrar Sesión
             </button>
           } @else {
-            @if (isHomePage) {
+            @if (isHomePage()) {
               <a (click)="scrollToSection('inicio')"
                  class="block px-3 py-2 text-gray-300 hover:text-barberia-gold cursor-pointer">
                 Inicio
@@ -205,17 +206,38 @@ import { UserRole } from '../../core/interfaces';
   `,
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class NavbarComponent {
+export class NavbarComponent implements OnInit, OnDestroy {
   public showMobileMenu = signal(false);
+  public isHomePage = signal(true);
+  private destroy$ = new Subject<void>();
   
   constructor(
     public authService: AuthService,
     private router: Router
   ) {}
 
-  // Método para verificar si estamos en la página de inicio
-  get isHomePage(): boolean {
-    return this.router.url === '/' || this.router.url === '';
+  ngOnInit(): void {
+    // Verificar la ruta inicial
+    this.updateHomePage(this.router.url);
+    
+    // Suscribirse a los cambios de navegación
+    this.router.events
+      .pipe(
+        filter(event => event instanceof NavigationEnd),
+        takeUntil(this.destroy$)
+      )
+      .subscribe((event) => {
+        this.updateHomePage((event as NavigationEnd).urlAfterRedirects);
+      });
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
+  private updateHomePage(url: string): void {
+    this.isHomePage.set(url === '/' || url === '');
   }
 
   toggleMobileMenu(): void {
