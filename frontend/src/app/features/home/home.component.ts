@@ -121,6 +121,7 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    // Limpiar recursos de Three.js
     this.cleanupThreeJs();
   }
 

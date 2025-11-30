@@ -30,10 +30,10 @@ import { filter, Subject, takeUntil } from 'rxjs';
             @if (authService.isLoggedIn()) {
               <!-- Navegación para usuarios autenticados -->
               @if (authService.isAdmin()) {
-                <a routerLink="/admin/gestion-barberos" routerLinkActive="nav-link-active" class="nav-link">
+                <a routerLink="/admin/barberos" routerLinkActive="nav-link-active" class="nav-link">
                   Gestión Barberos
                 </a>
-                <a routerLink="/admin/gestion-servicios" routerLinkActive="nav-link-active" class="nav-link">
+                <a routerLink="/admin/servicios" routerLinkActive="nav-link-active" class="nav-link">
                   Servicios
                 </a>
                 <a routerLink="/admin/reportes" routerLinkActive="nav-link-active" class="nav-link">
@@ -133,11 +133,11 @@ import { filter, Subject, takeUntil } from 'rxjs';
             </div>
 
             @if (authService.isAdmin()) {
-              <a routerLink="/admin/gestion-barberos" 
+              <a routerLink="/admin/barberos" 
                  class="block px-3 py-2 text-gray-300 hover:text-barberia-gold">
                 Gestión Barberos
               </a>
-              <a routerLink="/admin/gestion-servicios" 
+              <a routerLink="/admin/servicios" 
                  class="block px-3 py-2 text-gray-300 hover:text-barberia-gold">
                 Servicios
               </a>

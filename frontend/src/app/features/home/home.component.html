@@ -42,7 +42,7 @@
               </a>
             }
             @if (authService.isAdmin()) {
-              <a routerLink="/admin/gestion-barberos" class="btn-primary text-lg px-8 py-3">
+              <a routerLink="/admin/barberos" class="btn-primary text-lg px-8 py-3">
                 Panel Admin
               </a>
             }
@@ -260,7 +260,7 @@
                 </div>
                 <div>
                   <h4 class="font-semibold text-gray-100">Dirección</h4>
-                  <p class="text-gray-400">Calle 123 # 45-67, Centro<br>Bogotá, Colombia</p>
+                  <p class="text-gray-400">ALFA BARBERÍA<br>Popayán, Cauca, Colombia</p>
                 </div>
               </div>
 
@@ -305,26 +305,29 @@
           </div>
         </div>
 
-        <!-- Mapa (placeholder) -->
+        <!-- Mapa interactivo -->
         <div>
           <div class="card h-full">
             <h3 class="text-xl font-bold text-barberia-gold mb-4">Ubicación</h3>
-            <div class="bg-gray-700 rounded-lg h-64 lg:h-80 flex items-center justify-center">
-              <div class="text-center">
-                <div class="text-4xl text-barberia-gold mb-2">📍</div>
-                <p class="text-gray-400">Mapa interactivo</p>
-                <p class="text-sm text-gray-500 mt-2">
-                  Calle 123 # 45-67<br>
-                  Centro, Bogotá
-                </p>
-              </div>
+            <div class="map-container">
+              <iframe 
+                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3986.0632058199376!2d-76.56918132538193!3d2.486032097492647!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x8e3005003518f47b%3A0x5a4f34ced99cd26e!2sALFA%20BARBER%C3%8DA!5e0!3m2!1ses!2sco!4v1764516971716!5m2!1ses!2sco" 
+                allowfullscreen="" 
+                loading="lazy" 
+                referrerpolicy="no-referrer-when-downgrade"
+                title="Ubicación de ALFA BARBERÍA en Popayán">
+              </iframe>
             </div>
             <div class="mt-4 flex space-x-4">
-              <a href="https://maps.google.com" target="_blank" 
+              <a href="https://www.google.com/maps/place/ALFA+BARBERÍA/@2.4860321,-76.5691813,17z/data=!3m1!4b1!4m6!3m5!1s0x8e3005003518f47b:0x5a4f34ced99cd26e!8m2!3d2.4860321!4d-76.5666064!16s%2Fg%2F11yc7mfj74?entry=ttu&g_ep=EgoyMDI1MTEyMy4xIKXMDSoASAFQAw%3D%3D" 
+                 target="_blank" 
+                 rel="noopener noreferrer"
                  class="btn-secondary text-sm px-4 py-2 flex-1 text-center">
                 Ver en Google Maps
               </a>
-              <a href="https://waze.com" target="_blank" 
+              <a href="https://www.waze.com/ul?ll=2.486171441081191,-76.5667244220668&navigate=yes" 
+                 target="_blank" 
+                 rel="noopener noreferrer"
                  class="btn-primary text-sm px-4 py-2 flex-1 text-center">
                 Abrir en Waze
               </a>
