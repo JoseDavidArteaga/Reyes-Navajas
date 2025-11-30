@@ -5,6 +5,7 @@ export * from './services/servicio.service';
 export * from './services/reserva.service';
 export * from './services/cola.service';
 export * from './services/three-scene.service';
+export * from './services/razor-scene.service';
 
 // Guards
 export * from './guards/auth.guard';

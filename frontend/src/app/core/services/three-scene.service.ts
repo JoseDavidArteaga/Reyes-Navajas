@@ -48,7 +48,7 @@ export class ThreeSceneService {
         // Aumentar el tamaño de la estatua en un 80%
         statue.scale.set(3.5, 3.5, 3.5);
         // Posicionar la estatua más abajo para crear espacio con el header
-        statue.position.set(0, -1.5, 0);
+        statue.position.set(0, -1, 0);
         
         // Función de animación
         const animate = () => {

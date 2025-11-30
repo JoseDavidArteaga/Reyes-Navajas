@@ -1,30 +1,31 @@
 <div class="bg-barberia-darker">
 
-  <!-- Sección Inicio -->
-  <section id="inicio" class="relative bg-barberia-pattern py-20 lg:py-32 overflow-hidden">
+  <!-- Sección Inicio - Optimizada para viewport -->
+  <section id="inicio" class="relative bg-barberia-pattern h-screen max-h-[800px] flex items-center justify-center overflow-hidden">
     <!-- Contenedor de la estatua 3D como fondo -->
     <div #statueContainer class="absolute inset-0 w-full h-full opacity-50 pointer-events-none">
       <!-- La estatua 3D se renderizará aquí como fondo -->
     </div>
     
     <!-- Contenido principal -->
-    <div class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
       <div class="text-center">
-        <h1 class="text-4xl md:text-6xl font-display font-bold text-gray-100 mb-6 drop-shadow-lg">
+        <h1 class="text-3xl md:text-5xl lg:text-6xl font-display font-bold text-gray-100 mb-6 drop-shadow-lg leading-tight">
           Bienvenido a 
-          <span class="text-barberia-gold">Reyes & Navajas</span>
+          <span class="text-barberia-gold block mt-2">Reyes & Navajas</span>
         </h1>
 
-        <p class="text-xl md:text-2xl text-gray-300 mb-8 max-w-3xl mx-auto drop-shadow-md">
-          La mejor barbería de la ciudad. Tradición, estilo y profesionalismo en cada servicio.
+        <p class="text-lg md:text-xl lg:text-2xl text-gray-300 mb-8 max-w-3xl mx-auto drop-shadow-md font-light leading-relaxed">
+          La mejor barbería de la ciudad.
+          <span class="block mt-1 text-barberia-gold/90">Tradición, estilo y profesionalismo en cada servicio.</span>
         </p>
 
         @if (!authService.isLoggedIn()) {
-          <div class="space-x-4">
-            <a routerLink="/registro" class="btn-primary text-lg px-8 py-3">
+          <div class="space-x-4 space-y-3 md:space-y-0">
+            <a routerLink="/registro" class="btn-primary text-lg px-8 py-3 inline-block">
               Reservar Ahora
             </a>
-            <a routerLink="/login" class="btn-secondary text-lg px-8 py-3">
+            <a routerLink="/login" class="btn-secondary text-lg px-8 py-3 inline-block">
               Iniciar Sesión
             </a>
           </div>
@@ -51,42 +52,77 @@
     </div>
   </section>
 
-  <!-- Services Section -->
-  <section class="pt-40 pb-16 lg:pt-48 lg:pb-24">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div class="text-center mb-16">
-        <h2 class="text-3xl md:text-4xl font-display font-bold text-gray-100 mb-4">
-          Nuestros Servicios
-        </h2>
-        <p class="text-lg text-gray-400 max-w-2xl mx-auto">
-          Ofrecemos una amplia gama de servicios profesionales para el cuidado masculino
-        </p>
-      </div>
+  <!-- Razor Section -->
+  <section class="relative py-16 lg:py-20 bg-gradient-to-b from-gray-900 to-barberia-darker overflow-hidden min-h-[600px] flex items-center">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+        <!-- Contenido de texto -->
+        <div class="text-center lg:text-left">
+          <h2 class="text-3xl md:text-4xl lg:text-5xl font-display font-bold text-gray-100 mb-6 leading-tight">
+            Maestría en cada 
+            <span class="text-barberia-gold block mt-1">Corte</span>
+          </h2>
+          
+          <p class="text-lg md:text-xl text-gray-300 mb-8 leading-relaxed max-w-xl">
+            Con herramientas de la más alta calidad y técnicas perfeccionadas a través de generaciones, 
+            cada servicio es una obra de arte.
+          </p>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-        @for (servicio of servicios; track servicio.id) {
-          <div class="card hover:shadow-xl-gold transition-shadow duration-300">
-            <div class="text-center">
-              <div class="w-16 h-16 bg-barberia-gold bg-opacity-20 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span class="text-2xl">{{ servicio.icon }}</span>
-              </div>
-              <h3 class="text-xl font-semibold text-gray-100 mb-2">
-                {{ servicio.nombre }}
-              </h3>
-              <p class="text-gray-400 mb-4">
-                {{ servicio.descripcion }}
-              </p>
-              <div class="flex justify-between items-center">
-                <span class="text-barberia-gold font-semibold">
-                  ${{ servicio.precio }}
-                </span>
-                <span class="text-sm text-gray-500">
-                  {{ servicio.duracion }} min
-                </span>
-              </div>
+          <div class="grid grid-cols-2 gap-4 mb-8">
+            <div class="text-center md:text-left p-4 bg-gray-800/30 rounded-lg backdrop-blur-sm border border-barberia-gold/20">
+              <h4 class="text-barberia-gold font-semibold mb-2 text-lg">Tradición</h4>
+              <p class="text-gray-300 text-sm">Técnicas heredadas</p>
+            </div>
+            <div class="text-center md:text-left p-4 bg-gray-800/30 rounded-lg backdrop-blur-sm border border-barberia-gold/20">
+              <h4 class="text-barberia-gold font-semibold mb-2 text-lg">Precisión</h4>
+              <p class="text-gray-300 text-sm">Herramientas de calidad</p>
+            </div>
+            <div class="text-center md:text-left p-4 bg-gray-800/30 rounded-lg backdrop-blur-sm border border-barberia-gold/20">
+              <h4 class="text-barberia-gold font-semibold mb-2 text-lg">Experiencia</h4>
+              <p class="text-gray-300 text-sm">+10 años de arte</p>
+            </div>
+            <div class="text-center md:text-left p-4 bg-gray-800/30 rounded-lg backdrop-blur-sm border border-barberia-gold/20">
+              <h4 class="text-barberia-gold font-semibold mb-2 text-lg">Exclusividad</h4>
+              <p class="text-gray-300 text-sm">Atención personalizada</p>
             </div>
           </div>
-        }
+
+          <div class="text-center lg:text-left">
+            @if (!authService.isLoggedIn()) {
+              <a routerLink="/registro" class="btn-primary text-lg px-6 py-3 inline-block">
+                Reserva tu Cita
+              </a>
+            } @else {
+              @if (authService.isCliente()) {
+                <a routerLink="/cliente/reservar" class="btn-primary text-lg px-6 py-3 inline-block">
+                  Hacer Reserva
+                </a>
+              }
+            }
+          </div>
+        </div>
+
+        <!-- Contenedor de la navaja 3D -->
+        <div class="flex justify-center lg:justify-end">
+          <div class="relative">
+            <!-- Efectos de partículas neón -->
+            <div class="absolute -inset-4 opacity-70">
+              <div class="absolute top-0 left-1/4 w-1 h-1 bg-barberia-gold rounded-full animate-ping" style="animation-delay: 0s;"></div>
+              <div class="absolute top-1/4 right-0 w-1 h-1 bg-barberia-gold rounded-full animate-ping" style="animation-delay: 0.5s;"></div>
+              <div class="absolute bottom-0 left-3/4 w-1 h-1 bg-barberia-gold rounded-full animate-ping" style="animation-delay: 1s;"></div>
+              <div class="absolute bottom-1/4 left-0 w-1 h-1 bg-barberia-gold rounded-full animate-ping" style="animation-delay: 1.5s;"></div>
+              <div class="absolute top-1/2 left-1/2 w-1 h-1 bg-white rounded-full animate-ping" style="animation-delay: 2s;"></div>
+            </div>
+            
+            <div #razorContainer class="razor-container w-72 h-72 lg:w-80 lg:h-80 rounded-lg bg-gradient-to-br from-gray-800/30 to-gray-900/50 backdrop-blur-sm border border-barberia-gold/10 shadow-2xl">
+              <!-- La navaja 3D se renderizará aquí -->
+            </div>
+            
+            <!-- Efectos decorativos mejorados -->
+            <div class="absolute -top-4 -right-4 w-24 h-24 bg-barberia-gold/20 rounded-full blur-xl animate-pulse"></div>
+            <div class="absolute -bottom-4 -left-4 w-32 h-32 bg-barberia-gold/10 rounded-full blur-2xl animate-pulse" style="animation-delay: 1s;"></div>
+          </div>
+        </div>
       </div>
     </div>
   </section>

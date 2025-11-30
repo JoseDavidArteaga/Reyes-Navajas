@@ -1,7 +1,7 @@
 import { Component, ChangeDetectionStrategy, OnInit, OnDestroy, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
-import { AuthService, ThreeSceneService } from '../../core';
+import { AuthService, ThreeSceneService, RazorSceneService } from '../../core';
 import * as THREE from 'three';
 
 @Component({
@@ -14,16 +14,24 @@ import * as THREE from 'three';
 })
 export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
   @ViewChild('statueContainer', { static: false }) statueContainer!: ElementRef<HTMLDivElement>;
+  @ViewChild('razorContainer', { static: false }) razorContainer!: ElementRef<HTMLDivElement>;
   
   private scene: THREE.Scene | null = null;
   private camera: THREE.PerspectiveCamera | null = null;
   private renderer: THREE.WebGLRenderer | null = null;
   private animationId: number | null = null;
   private animateFunction: (() => void) | null = null;
+  
+  // Variables para la navaja
+  private razorScene: THREE.Scene | null = null;
+  private razorCamera: THREE.PerspectiveCamera | null = null;
+  private razorRenderer: THREE.WebGLRenderer | null = null;
+  private razorAnimateFunction: (() => void) | null = null;
 
   constructor(
     public authService: AuthService,
-    private threeSceneService: ThreeSceneService
+    private threeSceneService: ThreeSceneService,
+    private razorSceneService: RazorSceneService
   ) {}
 
   servicios = [
@@ -106,6 +114,10 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
 
   ngAfterViewInit(): void {
     this.initializeStatue();
+    // Agregar un pequeño delay para asegurar que el DOM esté listo
+    setTimeout(() => {
+      this.initializeRazor();
+    }, 100);
   }
 
   ngOnDestroy(): void {
@@ -130,6 +142,38 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
     }
   }
 
+  private initializeRazor(): void {
+    console.log('Inicializando navaja, container:', this.razorContainer?.nativeElement);
+    if (this.razorContainer?.nativeElement) {
+      const container = this.razorContainer.nativeElement;
+      console.log('Container encontrado - dimensiones:', {
+        width: container.clientWidth,
+        height: container.clientHeight,
+        offsetWidth: container.offsetWidth,
+        offsetHeight: container.offsetHeight,
+        style: window.getComputedStyle(container)
+      });
+      
+      this.razorSceneService.createRazorScene(
+        this.razorContainer.nativeElement
+      ).then((sceneData) => {
+        console.log('Escena de navaja creada exitosamente:', sceneData);
+        this.razorScene = sceneData.scene;
+        this.razorCamera = sceneData.camera;
+        this.razorRenderer = sceneData.renderer;
+        this.razorAnimateFunction = sceneData.animate;
+        
+        // Iniciar animación
+        this.razorAnimateFunction();
+        console.log('Animación de navaja iniciada');
+      }).catch(error => {
+        console.error('Error inicializando la escena de la navaja:', error);
+      });
+    } else {
+      console.error('Container de navaja no encontrado');
+    }
+  }
+
   private cleanupThreeJs(): void {
     if (this.animationId) {
       cancelAnimationFrame(this.animationId);
@@ -139,8 +183,16 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
       this.renderer.dispose();
     }
     
+    if (this.razorRenderer) {
+      this.razorRenderer.dispose();
+    }
+    
     if (this.scene) {
       this.scene.clear();
+    }
+    
+    if (this.razorScene) {
+      this.razorScene.clear();
     }
   }
 }
