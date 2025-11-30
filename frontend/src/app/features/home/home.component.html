@@ -1,0 +1,327 @@
+<div class="bg-barberia-darker">
+
+  <!-- Sección Inicio -->
+  <section id="inicio" class="relative bg-barberia-pattern py-20 lg:py-32">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="text-center">
+        <h1 class="text-4xl md:text-6xl font-display font-bold text-gray-100 mb-6">
+          Bienvenido a 
+          <span class="text-barberia-gold">Reyes & Navajas</span>
+        </h1>
+
+        <p class="text-xl md:text-2xl text-gray-300 mb-8 max-w-3xl mx-auto">
+          La mejor barbería de la ciudad. Tradición, estilo y profesionalismo en cada servicio.
+        </p>
+
+        @if (!authService.isLoggedIn()) {
+          <div class="space-x-4">
+            <a routerLink="/registro" class="btn-primary text-lg px-8 py-3">
+              Reservar Ahora
+            </a>
+            <a routerLink="/login" class="btn-secondary text-lg px-8 py-3">
+              Iniciar Sesión
+            </a>
+          </div>
+        } @else {
+          <div class="space-x-4">
+            @if (authService.isCliente()) {
+              <a routerLink="/cliente/reservar" class="btn-primary text-lg px-8 py-3">
+                Hacer Reserva
+              </a>
+            }
+            @if (authService.isBarbero()) {
+              <a routerLink="/barbero/agenda-diaria" class="btn-primary text-lg px-8 py-3">
+                Ver Agenda
+              </a>
+            }
+            @if (authService.isAdmin()) {
+              <a routerLink="/admin/gestion-barberos" class="btn-primary text-lg px-8 py-3">
+                Panel Admin
+              </a>
+            }
+          </div>
+        }
+      </div>
+    </div>
+  </section>
+
+  <!-- Services Section -->
+  <section class="py-16 lg:py-24">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="text-center mb-16">
+        <h2 class="text-3xl md:text-4xl font-display font-bold text-gray-100 mb-4">
+          Nuestros Servicios
+        </h2>
+        <p class="text-lg text-gray-400 max-w-2xl mx-auto">
+          Ofrecemos una amplia gama de servicios profesionales para el cuidado masculino
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        @for (servicio of servicios; track servicio.id) {
+          <div class="card hover:shadow-xl-gold transition-shadow duration-300">
+            <div class="text-center">
+              <div class="w-16 h-16 bg-barberia-gold bg-opacity-20 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span class="text-2xl">{{ servicio.icon }}</span>
+              </div>
+              <h3 class="text-xl font-semibold text-gray-100 mb-2">
+                {{ servicio.nombre }}
+              </h3>
+              <p class="text-gray-400 mb-4">
+                {{ servicio.descripcion }}
+              </p>
+              <div class="flex justify-between items-center">
+                <span class="text-barberia-gold font-semibold">
+                  ${{ servicio.precio }}
+                </span>
+                <span class="text-sm text-gray-500">
+                  {{ servicio.duracion }} min
+                </span>
+              </div>
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+  </section>
+
+  <!-- Sección Conócenos -->
+  <section id="conocenos" class="bg-gray-900 py-16 lg:py-24">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="text-center mb-16">
+        <h2 class="text-3xl md:text-4xl font-display font-bold text-gray-100 mb-4">
+          Conócenos
+        </h2>
+        <p class="text-lg text-gray-400 max-w-2xl mx-auto">
+          Somos más que una barbería, somos una tradición familiar
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+        <div>
+          <h3 class="text-2xl font-display font-bold text-barberia-gold mb-6">
+            Nuestra Historia
+          </h3>
+          <p class="text-gray-300 mb-6 text-lg leading-relaxed">
+            Fundada en 2010 por los hermanos Reyes, nuestra barbería nació con la visión de combinar 
+            las técnicas tradicionales de barbería con un enfoque moderno y profesional. Lo que comenzó 
+            como un pequeño local en el centro de la ciudad, se ha convertido en el referente de calidad 
+            y estilo masculino.
+          </p>
+          <p class="text-gray-300 mb-6 text-lg leading-relaxed">
+            Cada corte es una obra de arte, cada cliente es familia. Nuestro equipo de barberos 
+            certificados cuenta con más de 50 años de experiencia combinada, garantizando que cada 
+            visita sea una experiencia única.
+          </p>
+          <div class="grid grid-cols-2 gap-6">
+            <div class="text-center">
+              <div class="text-3xl font-bold text-barberia-gold">10+</div>
+              <div class="text-gray-400">Años de experiencia</div>
+            </div>
+            <div class="text-center">
+              <div class="text-3xl font-bold text-barberia-gold">5000+</div>
+              <div class="text-gray-400">Clientes satisfechos</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="relative">
+          <div class="bg-barberia-pattern rounded-lg p-8 border border-gray-700">
+            <h4 class="text-xl font-bold text-barberia-gold mb-4">Nuestros Valores</h4>
+            <div class="space-y-4">
+              <div class="flex items-start space-x-3">
+                <div class="w-6 h-6 bg-barberia-gold rounded-full flex items-center justify-center mt-1">
+                  <span class="text-barberia-dark text-sm">✓</span>
+                </div>
+                <div>
+                  <h5 class="font-semibold text-gray-100">Calidad</h5>
+                  <p class="text-gray-400 text-sm">Solo usamos productos premium y técnicas especializadas</p>
+                </div>
+              </div>
+              <div class="flex items-start space-x-3">
+                <div class="w-6 h-6 bg-barberia-gold rounded-full flex items-center justify-center mt-1">
+                  <span class="text-barberia-dark text-sm">✓</span>
+                </div>
+                <div>
+                  <h5 class="font-semibold text-gray-100">Tradición</h5>
+                  <p class="text-gray-400 text-sm">Respetamos las técnicas clásicas de barbería</p>
+                </div>
+              </div>
+              <div class="flex items-start space-x-3">
+                <div class="w-6 h-6 bg-barberia-gold rounded-full flex items-center justify-center mt-1">
+                  <span class="text-barberia-dark text-sm">✓</span>
+                </div>
+                <div>
+                  <h5 class="font-semibold text-gray-100">Innovación</h5>
+                  <p class="text-gray-400 text-sm">Incorporamos tecnología para mejorar tu experiencia</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features Section -->
+  <section class="bg-gray-900 py-16 lg:py-24">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="text-center mb-16">
+        <h2 class="text-3xl md:text-4xl font-display font-bold text-gray-100 mb-4">
+          ¿Por qué elegirnos?
+        </h2>
+        <p class="text-lg text-gray-400 max-w-2xl mx-auto">
+          Más de 10 años de experiencia nos respaldan
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+        @for (caracteristica of caracteristicas; track caracteristica.titulo) {
+          <div class="text-center">
+            <div class="w-12 h-12 bg-barberia-gold bg-opacity-20 rounded-lg flex items-center justify-center mx-auto mb-4">
+              <span class="text-barberia-gold text-xl">{{ caracteristica.icon }}</span>
+            </div>
+            <h3 class="text-lg font-semibold text-gray-100 mb-2">
+              {{ caracteristica.titulo }}
+            </h3>
+            <p class="text-gray-400">
+              {{ caracteristica.descripcion }}
+            </p>
+          </div>
+        }
+      </div>
+    </div>
+  </section>
+
+  <!-- Sección Aquí estamos -->
+  <section id="aqui-estamos" class="py-16 lg:py-24">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="text-center mb-16">
+        <h2 class="text-3xl md:text-4xl font-display font-bold text-gray-100 mb-4">
+          Aquí estamos
+        </h2>
+        <p class="text-lg text-gray-400 max-w-2xl mx-auto">
+          Visítanos y descubre por qué somos la barbería de confianza en la ciudad
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
+        <!-- Información de contacto -->
+        <div class="space-y-6">
+          <div class="card">
+            <h3 class="text-xl font-bold text-barberia-gold mb-4">Información de Contacto</h3>
+            
+            <div class="space-y-4">
+              <div class="flex items-start space-x-3">
+                <div class="w-8 h-8 bg-barberia-gold bg-opacity-20 rounded-lg flex items-center justify-center">
+                  <span class="text-barberia-gold">📍</span>
+                </div>
+                <div>
+                  <h4 class="font-semibold text-gray-100">Dirección</h4>
+                  <p class="text-gray-400">Calle 123 # 45-67, Centro<br>Bogotá, Colombia</p>
+                </div>
+              </div>
+
+              <div class="flex items-start space-x-3">
+                <div class="w-8 h-8 bg-barberia-gold bg-opacity-20 rounded-lg flex items-center justify-center">
+                  <span class="text-barberia-gold">📞</span>
+                </div>
+                <div>
+                  <h4 class="font-semibold text-gray-100">Teléfono</h4>
+                  <p class="text-gray-400">+57 (1) 234-5678<br>+57 300 123 4567</p>
+                </div>
+              </div>
+
+              <div class="flex items-start space-x-3">
+                <div class="w-8 h-8 bg-barberia-gold bg-opacity-20 rounded-lg flex items-center justify-center">
+                  <span class="text-barberia-gold">✉️</span>
+                </div>
+                <div>
+                  <h4 class="font-semibold text-gray-100">Email</h4>
+                  <p class="text-gray-400">info&#64;reyesnavajas.com<br>reservas&#64;reyesnavajas.com</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3 class="text-xl font-bold text-barberia-gold mb-4">Horarios de Atención</h3>
+            <div class="space-y-3">
+              <div class="flex justify-between items-center">
+                <span class="text-gray-300">Lunes - Viernes</span>
+                <span class="text-barberia-gold font-medium">8:00 AM - 8:00 PM</span>
+              </div>
+              <div class="flex justify-between items-center">
+                <span class="text-gray-300">Sábados</span>
+                <span class="text-barberia-gold font-medium">8:00 AM - 6:00 PM</span>
+              </div>
+              <div class="flex justify-between items-center">
+                <span class="text-gray-300">Domingos</span>
+                <span class="text-barberia-gold font-medium">10:00 AM - 4:00 PM</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Mapa (placeholder) -->
+        <div>
+          <div class="card h-full">
+            <h3 class="text-xl font-bold text-barberia-gold mb-4">Ubicación</h3>
+            <div class="bg-gray-700 rounded-lg h-64 lg:h-80 flex items-center justify-center">
+              <div class="text-center">
+                <div class="text-4xl text-barberia-gold mb-2">📍</div>
+                <p class="text-gray-400">Mapa interactivo</p>
+                <p class="text-sm text-gray-500 mt-2">
+                  Calle 123 # 45-67<br>
+                  Centro, Bogotá
+                </p>
+              </div>
+            </div>
+            <div class="mt-4 flex space-x-4">
+              <a href="https://maps.google.com" target="_blank" 
+                 class="btn-secondary text-sm px-4 py-2 flex-1 text-center">
+                Ver en Google Maps
+              </a>
+              <a href="https://waze.com" target="_blank" 
+                 class="btn-primary text-sm px-4 py-2 flex-1 text-center">
+                Abrir en Waze
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Call to Action -->
+  <section class="py-16 lg:py-24">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+      <h2 class="text-3xl md:text-4xl font-display font-bold text-gray-100 mb-4">
+        ¿Listo para tu próximo look?
+      </h2>
+      <p class="text-lg text-gray-400 mb-8">
+        Reserva tu cita ahora o únete a nuestra cola virtual para ser atendido sin cita previa
+      </p>
+
+      @if (!authService.isLoggedIn()) {
+        <div class="space-x-4">
+          <a routerLink="/registro" class="btn-primary text-lg px-8 py-3">
+            Crear Cuenta
+          </a>
+        </div>
+      } @else {
+        <div class="space-x-4">
+          @if (authService.isCliente()) {
+            <a routerLink="/cliente/reservar" class="btn-primary text-lg px-6 py-3">
+              Reservar Cita
+            </a>
+            <a routerLink="/cliente/cola-virtual" class="btn-secondary text-lg px-6 py-3">
+              Cola Virtual
+            </a>
+          }
+        </div>
+      }
+    </div>
+  </section>
+
+</div>

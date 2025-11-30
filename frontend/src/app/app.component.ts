@@ -10,7 +10,7 @@ import { NavbarComponent, FooterComponent } from './shared';
     <div class="min-h-screen flex flex-col bg-barberia-darker">
       <app-navbar></app-navbar>
       
-      <main class="flex-1">
+      <main class="flex-1 pt-16">
         <router-outlet></router-outlet>
       </main>
       

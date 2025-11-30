@@ -1,6 +1,6 @@
-import { Component, computed, ChangeDetectionStrategy } from '@angular/core';
+import { Component, signal, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
+import { RouterModule, Router } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
 import { UserRole } from '../../core/interfaces';
 
@@ -9,7 +9,7 @@ import { UserRole } from '../../core/interfaces';
   standalone: true,
   imports: [CommonModule, RouterModule],
   template: `
-    <nav class="bg-barberia-dark border-b border-gray-700 shadow-xl">
+    <nav class="fixed top-0 left-0 right-0 z-50 bg-barberia-dark border-b border-gray-700 shadow-xl backdrop-blur-sm bg-opacity-95 transition-all duration-300">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex justify-between h-16">
           <!-- Logo y marca -->
@@ -75,6 +75,17 @@ import { UserRole } from '../../core/interfaces';
               </div>
             } @else {
               <!-- Navegación para visitantes -->
+              @if (isHomePage) {
+                <a class="nav-link cursor-pointer" (click)="scrollToSection('inicio')">
+                  Inicio
+                </a>
+                <a class="nav-link cursor-pointer" (click)="scrollToSection('conocenos')">
+                  Conócenos
+                </a>
+                <a class="nav-link cursor-pointer" (click)="scrollToSection('aqui-estamos')">
+                  Aquí estamos
+                </a>
+              }
               <a routerLink="/login" routerLinkActive="nav-link-active" class="nav-link">
                 Iniciar Sesión
               </a>
@@ -165,6 +176,20 @@ import { UserRole } from '../../core/interfaces';
               Cerrar Sesión
             </button>
           } @else {
+            @if (isHomePage) {
+              <a (click)="scrollToSection('inicio')"
+                 class="block px-3 py-2 text-gray-300 hover:text-barberia-gold cursor-pointer">
+                Inicio
+              </a>
+              <a (click)="scrollToSection('conocenos')"
+                 class="block px-3 py-2 text-gray-300 hover:text-barberia-gold cursor-pointer">
+                Conócenos
+              </a>
+              <a (click)="scrollToSection('aqui-estamos')"
+                 class="block px-3 py-2 text-gray-300 hover:text-barberia-gold cursor-pointer">
+                Aquí estamos
+              </a>
+            }
             <a routerLink="/login" 
                class="block px-3 py-2 text-gray-300 hover:text-barberia-gold">
               Iniciar Sesión
@@ -181,13 +206,39 @@ import { UserRole } from '../../core/interfaces';
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class NavbarComponent {
-  public showMobileMenu = computed(() => false);
+  public showMobileMenu = signal(false);
   
-  constructor(public authService: AuthService) {}
+  constructor(
+    public authService: AuthService,
+    private router: Router
+  ) {}
+
+  // Método para verificar si estamos en la página de inicio
+  get isHomePage(): boolean {
+    return this.router.url === '/' || this.router.url === '';
+  }
 
   toggleMobileMenu(): void {
-    // En una implementación real, usarías un signal para manejar esto
-    console.log('Toggle mobile menu');
+    this.showMobileMenu.set(!this.showMobileMenu());
+  }
+
+  scrollToSection(sectionId: string): void {
+    // Cerrar el menú móvil si está abierto
+    this.showMobileMenu.set(false);
+    
+    // Hacer scroll a la sección
+    setTimeout(() => {
+      const element = document.getElementById(sectionId);
+      if (element) {
+        const navbarHeight = 64; // altura del navbar (h-16 = 64px)
+        const elementPosition = element.offsetTop - navbarHeight;
+        
+        window.scrollTo({ 
+          top: elementPosition,
+          behavior: 'smooth'
+        });
+      }
+    }, 100);
   }
 
   logout(): void {
