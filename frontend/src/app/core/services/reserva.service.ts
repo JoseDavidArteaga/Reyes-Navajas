@@ -18,7 +18,7 @@ import { addDays, format, isAfter, isBefore, setHours, setMinutes } from 'date-f
   providedIn: 'root'
 })
 export class ReservaService {
-  private readonly API_URL = 'http://localhost:8080/api/reservas';
+  private readonly API_URL = 'http://localhost:8088/api/reservas';
   private reservasSignal = signal<Reserva[]>([]);
   private isLoadingSignal = signal<boolean>(false);
 
@@ -103,7 +103,7 @@ export class ReservaService {
     });
   }
 
-  createReserva(reserva: CreateReservaRequest): Observable<ApiResponse<Reserva>> {
+/*   createReserva(reserva: CreateReservaRequest): Observable<ApiResponse<Reserva>> {
     this.isLoadingSignal.set(true);
     
     const currentUser = this.authService.currentUser();
@@ -137,7 +137,34 @@ export class ReservaService {
         this.isLoadingSignal.set(false);
       })
     );
+  } */
+  createReserva(reserva: CreateReservaRequest): Observable<ApiResponse<Reserva>> {
+  this.isLoadingSignal.set(true);
+
+  const currentUser = this.authService.currentUser();
+  if (!currentUser) {
+    throw new Error('Usuario no autenticado');
   }
+
+  // Se envía al backend igual que lo recibes
+  const body = {
+    clienteId: currentUser.id,
+    barberoId: reserva.barberoId,
+    servicioId: reserva.servicioId,
+    fechaHora: reserva.fechaHora,      // debe ser string ISO, el backend lo parsea
+    notas: reserva.notas,
+  };
+
+  return this.http.post<ApiResponse<Reserva>>(this.API_URL, body).pipe(
+    tap(response => {
+      if (response.success && response.data) {
+        // Actualiza estados en Angular
+        this.reservasSignal.set([...this.reservasSignal(), response.data]);
+      }
+      this.isLoadingSignal.set(false);
+    })
+  );
+}
 
   updateReserva(id: string, reserva: UpdateReservaRequest): Observable<ApiResponse<Reserva>> {
     this.isLoadingSignal.set(true);
