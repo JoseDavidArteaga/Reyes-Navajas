@@ -12,6 +12,6 @@ spring:
     password: guest
 
 twilio:
-  account-sid: xxxx
-  auth-token: xxxx
-  from-number: xxxx
+  account-sid: xx
+  auth-token: xx
+  from-number: xx

@@ -55,7 +55,7 @@ public class TurnoService {
             try {
                 UUID turnoId = savedTurno.getId();
                 if (turnoId != null) {
-                    notificacionService.enviarNotificacionAsync(turno.getClienteId());
+                    notificacionService.enviarNotificacionAsync(dto);
                 }
             } catch (Exception ex) {
                 // loguear sin lanzar para no afectar la creación del turno

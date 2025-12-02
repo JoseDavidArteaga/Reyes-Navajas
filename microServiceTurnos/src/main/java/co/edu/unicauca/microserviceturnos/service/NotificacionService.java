@@ -1,6 +1,7 @@
 package co.edu.unicauca.microserviceturnos.service;
 
 import co.edu.unicauca.microserviceturnos.config.RabbitMQConfig;
+import co.edu.unicauca.microserviceturnos.dto.TurnoRequest;
 import co.edu.unicauca.microserviceturnos.dto.UsuarioResponse;
 import co.edu.unicauca.microserviceturnos.dto.WhatsAppRequest;
 import lombok.extern.slf4j.Slf4j;
@@ -14,6 +15,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 
 import java.time.Duration;
+import java.time.format.DateTimeFormatter;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
@@ -30,27 +32,30 @@ public class NotificacionService {
     @Autowired
     private RabbitTemplate rabbitTemplate;
 
-
-    public void enviarNotificacionAsync(String usuarioId) { // Parámetro mensajeTurno eliminado
+    public void enviarNotificacionAsync(TurnoRequest t) { // Parámetro mensajeTurno eliminado
         CompletableFuture.runAsync(() -> {
             try {
-                log.info("Iniciando notificación para usuario {}", usuarioId);
+                log.info("Iniciando notificación para usuario {}", t.getClienteId());
 
-                UsuarioResponse usuario = obtenerUsuario(usuarioId);
+                UsuarioResponse usuario = obtenerUsuario(t.getClienteId());
 
                 final String mensajeConfirmacion = String.format(
-                        "Hola %s, ¡tu turno ha sido confirmado con éxito! Gracias por preferir nuestros servicios.",
-                        usuario != null ? usuario.getNombre() : "cliente"
-                );
-
+                        "¡Hola %s! 👋\n\n" +
+                                "Tu turno ha sido *confirmado con éxito*. Aquí tienes los detalles:\n\n" +
+                                "📅 *Fecha y hora:* %s\n" +
+                                "\nGracias por reservar con nosotros. ¡Te esperamos! 😁",
+                        usuario != null ? usuario.getNombre() : "cliente",
+                        t.getFechaHora() != null
+                                ? t.getFechaHora().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"))
+                                : "Por confirmar");
 
                 if (usuario != null && usuario.getTelefono() != null && !usuario.getTelefono().isEmpty()) {
 
-                    enviarMensajeACola(usuarioId, usuario.getTelefono(), mensajeConfirmacion);
+                    enviarMensajeACola(t.getClienteId(), usuario.getTelefono(), mensajeConfirmacion);
                     log.info("Mensaje publicado en cola para {} (usuario {})",
-                            usuario.getTelefono(), usuarioId);
+                            usuario.getTelefono(), t.getClienteId());
                 } else {
-                    log.warn("Usuario {} sin teléfono", usuarioId);
+                    log.warn("Usuario {} sin teléfono", t.getClienteId());
                 }
 
             } catch (Exception e) {
@@ -58,7 +63,6 @@ public class NotificacionService {
             }
         });
     }
-
 
     private UsuarioResponse obtenerUsuario(String usuarioId) {
         String url = usuariosServiceUrl + "/" + usuarioId;
