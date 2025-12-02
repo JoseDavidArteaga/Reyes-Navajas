@@ -41,7 +41,7 @@ public class NotificacionService {
 
                 final String mensajeConfirmacion = String.format(
                         "¡Hola %s! 👋\n\n" +
-                                "Tu turno ha sido *confirmado con éxito*. Aquí tienes los detalles:\n\n" +
+                                "Tu turno ha sido *registrado con éxito*. Aquí tienes los detalles:\n\n" +
                                 "📅 *Fecha y hora:* %s\n" +
                                 "\nGracias por reservar con nosotros. ¡Te esperamos! 😁",
                         usuario != null ? usuario.getNombre() : "cliente",
