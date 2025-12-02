@@ -1,5 +1,6 @@
 package co.edu.unicauca.UsuariosMicroService.controller;
 
+import co.edu.unicauca.UsuariosMicroService.infra.dto.UsuarioResumenDTO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -83,5 +84,25 @@ public class UsuarioController {
     public ResponseEntity<List<User>> getAllUsuarios() throws Exception {
         List<User> users = service.findAll();
         return ResponseEntity.ok(users);
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<?> getUsuarioById(@PathVariable String id) {
+
+        Optional<User> opt = service.findById(Long.valueOf(id));
+        if (opt.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body("Usuario no encontrado");
+        }
+
+        User u = opt.get();
+
+        UsuarioResumenDTO dto = new UsuarioResumenDTO();
+        dto.setId(String.valueOf(u.getId()));
+        dto.setNombre(u.getNombre());
+        dto.setTelefono(u.getTelefono());
+        dto.setRol(u.getRol());
+
+        return ResponseEntity.ok(dto);
     }
 }
