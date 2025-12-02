@@ -22,7 +22,7 @@ spring:
 # IMPORTANTE: Ahora apunta al Gateway, no directo al microservicio
 usuarios:
   service:
-    url: http://localhost:8089/usuarios # <--- ¡CORREGIDO! Apuntando al Gateway en 8089
+    url: http://localhost:8089/usuarios # CORREGIDO! Apuntando al Gateway en 8089
 
 whatsapp:
   api:
