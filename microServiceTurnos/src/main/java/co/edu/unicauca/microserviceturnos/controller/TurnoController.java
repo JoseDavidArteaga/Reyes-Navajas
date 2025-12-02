@@ -3,6 +3,7 @@ package co.edu.unicauca.microserviceturnos.controller;
 
 import co.edu.unicauca.microserviceturnos.Excepciones.AccionInvalidaTurnoException;
 import co.edu.unicauca.microserviceturnos.dto.TurnoRequest;
+import co.edu.unicauca.microserviceturnos.entities.DisponibilidadBarbero;
 import co.edu.unicauca.microserviceturnos.dto.TurnoStateResponse;
 import co.edu.unicauca.microserviceturnos.dto.TurnoUpdate;
 import co.edu.unicauca.microserviceturnos.service.TurnoService;
@@ -146,6 +147,20 @@ public class TurnoController {
         }
     }
 
+    @GetMapping("/barberos/{barberoId}/disponibilidad")
+    public ResponseEntity<?> getDisponibilidadBarbero(
+            @PathVariable String barberoId,
+            @RequestParam(required = false) String fechaInicio,
+            @RequestParam(required = false) Integer dias) {
+        try {
+            DisponibilidadBarbero disponibilidad = turnoService.getDisponibilidadBarbero(barberoId, fechaInicio, dias);
+            return ResponseEntity.ok(disponibilidad);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
+    }
 
 
 }
