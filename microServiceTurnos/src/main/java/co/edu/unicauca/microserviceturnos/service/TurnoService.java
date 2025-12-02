@@ -32,6 +32,9 @@ public class TurnoService {
     @Autowired
     TurnoMapper turnoMapper;
 
+    @Autowired
+    NotificacionService notificacionService;
+
     @Transactional
     public TurnoRequest createTurno(TurnoRequest dto) {
         if (dto == null) {
@@ -49,6 +52,15 @@ public class TurnoService {
             dto.setFechaCreacion(LocalDateTime.now());
             Turno turno = turnoMapper.dtoToEntity(dto);
             Turno savedTurno = turnoRepository.save(turno);
+            try {
+                UUID turnoId = savedTurno.getId();
+                if (turnoId != null) {
+                    notificacionService.enviarNotificacionAsync(turno.getClienteId());
+                }
+            } catch (Exception ex) {
+                // loguear sin lanzar para no afectar la creación del turno
+                System.err.println("No se pudo iniciar notificación: " + ex.getMessage());
+            }
             return turnoMapper.entityToDto(savedTurno);
 
         } catch (IllegalArgumentException e) {
