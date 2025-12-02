@@ -1,5 +1,5 @@
 server:
-  port: 8089
+  port: 8089 # Puerto del API Gateway
 
 spring:
   application:
@@ -10,7 +10,7 @@ spring:
       routes:
 
         # ----------------------------------
-        #  Microservicio de Cat�logo
+        #  Microservicio de Catálogo
         # ----------------------------------
         - id: catalogo-service
           uri: http://localhost:8083
@@ -29,12 +29,13 @@ spring:
         #  Microservicio de Usuarios
         # ----------------------------------
         - id: usuarios-service
-          uri: http://localhost:8085
+          uri: http://localhost:8085 # <--- ¡CORREGIDO! Apuntando al puerto 8085 del Microservicio de Usuarios
           predicates:
             - Path=/usuarios/**
-
+          filters:
+            - StripPrefix=0
         # ----------------------------------
-        #  Microservicio de Autenticaci�n
+        #  Microservicio de Autenticación
         # ----------------------------------
         - id: auth-service
           uri: http://localhost:8084
@@ -52,4 +53,3 @@ logging:
   level:
     org.springframework.cloud.gateway: DEBUG
     org.springframework.security: DEBUG
-

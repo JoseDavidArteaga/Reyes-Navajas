@@ -1,4 +1,5 @@
 package co.edu.unicauca.apigateway.config;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.convert.converter.Converter;
@@ -25,6 +26,41 @@ public class SecurityConfig {
         http.authorizeExchange(exchanges -> exchanges
 
                 // ------------------------------------
+                //     LLAMADAS INTERNAS (sin JWT)
+                // ------------------------------------
+                // Solo accesibles con header X-Internal-Call: true
+                .pathMatchers("/usuarios/**")
+                .access((authentication, context) -> {
+                    String internalCall = context.getExchange()
+                            .getRequest()
+                            .getHeaders()
+                            .getFirst("X-Internal-Call");
+
+                    String serviceName = context.getExchange()
+                            .getRequest()
+                            .getHeaders()
+                            .getFirst("X-Service-Name");
+
+                    // Si es llamada interna, permitir
+                    if ("true".equals(internalCall) && serviceName != null) {
+                        return Mono.just(
+                                new org.springframework.security.authorization.AuthorizationDecision(true)
+                        );
+                    }
+
+                    // Si no, debe tener JWT y rol ADMINISTRADOR
+                    return authentication
+                            .map(auth -> new org.springframework.security.authorization.AuthorizationDecision(
+                                    auth.isAuthenticated() &&
+                                            auth.getAuthorities().stream()
+                                                    .anyMatch(a -> a.getAuthority().equals("ROLE_ADMINISTRADOR"))
+                            ))
+                            .defaultIfEmpty(
+                                    new org.springframework.security.authorization.AuthorizationDecision(false)
+                            );
+                })
+
+                // ------------------------------------
                 //          ENDPOINTS PÚBLICOS
                 // ------------------------------------
                 .pathMatchers("/auth/**").permitAll()
@@ -35,7 +71,6 @@ public class SecurityConfig {
                 // ------------------------------------
                 //          ENDPOINTS PROTEGIDOS
                 // ------------------------------------
-                .pathMatchers("/usuarios/**").hasRole("ADMINISTRADOR")
                 .pathMatchers("/catalogo/**").hasAnyRole("ADMINISTRADOR", "BARBERO", "CLIENTE")
                 .pathMatchers("/turnos/**").hasAnyRole("ADMINISTRADOR", "BARBERO", "CLIENTE")
 

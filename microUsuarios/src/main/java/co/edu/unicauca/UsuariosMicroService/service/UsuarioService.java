@@ -36,6 +36,10 @@ public class UsuarioService {
         return repository.findByNombre(nombre);
     }
 
+    @Transactional
+    public Optional<User> findById(Long id) {
+        return repository.findById(id);
+    }
    @Transactional
 public User save(UsuarioRequest usuarioRequest) {
     
