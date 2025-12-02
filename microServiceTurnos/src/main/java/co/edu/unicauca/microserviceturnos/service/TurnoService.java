@@ -4,13 +4,20 @@ package co.edu.unicauca.microserviceturnos.service;
 import co.edu.unicauca.microserviceturnos.dto.TurnoRequest;
 import co.edu.unicauca.microserviceturnos.dto.TurnoStateResponse;
 import co.edu.unicauca.microserviceturnos.dto.TurnoUpdate;
+import co.edu.unicauca.microserviceturnos.entities.DisponibilidadBarbero;
+import co.edu.unicauca.microserviceturnos.entities.HorarioDisponible;
 import co.edu.unicauca.microserviceturnos.entities.Turno;
 import co.edu.unicauca.microserviceturnos.mappers.TurnoMapper;
 import co.edu.unicauca.microserviceturnos.repository.TurnoRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -24,6 +31,9 @@ public class TurnoService {
 
     @Autowired
     TurnoMapper turnoMapper;
+
+    @Autowired
+    NotificacionService notificacionService;
 
     @Transactional
     public TurnoRequest createTurno(TurnoRequest dto) {
@@ -42,6 +52,15 @@ public class TurnoService {
             dto.setFechaCreacion(LocalDateTime.now());
             Turno turno = turnoMapper.dtoToEntity(dto);
             Turno savedTurno = turnoRepository.save(turno);
+            try {
+                UUID turnoId = savedTurno.getId();
+                if (turnoId != null) {
+                    notificacionService.enviarNotificacionAsync(turno.getClienteId());
+                }
+            } catch (Exception ex) {
+                // loguear sin lanzar para no afectar la creación del turno
+                System.err.println("No se pudo iniciar notificación: " + ex.getMessage());
+            }
             return turnoMapper.entityToDto(savedTurno);
 
         } catch (IllegalArgumentException e) {
@@ -178,6 +197,87 @@ public class TurnoService {
         return turnoMapper.entityToTurnoStateResponse(turno);
     }
 
+
+    public DisponibilidadBarbero getDisponibilidadBarbero(String barberoId, String fechaInicioStr, Integer dias) {
+        LocalDate fechaInicio;
+        try {
+            if (fechaInicioStr != null && !fechaInicioStr.isEmpty()) {
+                fechaInicio = LocalDate.parse(fechaInicioStr); // Formato yyyy-MM-dd
+            } else {
+                fechaInicio = LocalDate.now();
+            }
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Fecha inválida: " + fechaInicioStr);
+        }
+
+        int numDias = (dias != null) ? dias : 7;
+
+        // Convertir fechas a LocalDateTime para la consulta
+        LocalDateTime fechaHoraInicio = fechaInicio.atStartOfDay();
+        LocalDateTime fechaHoraFin = fechaInicio.plusDays(numDias).atStartOfDay();
+
+        // Consultar todos los turnos del barbero en el rango de fechas
+        List<Turno> turnosOcupados = turnoRepository.findByBarberoIdAndFechaHoraBetween(
+                barberoId,
+                fechaHoraInicio,
+                fechaHoraFin
+        );
+
+        List<HorarioDisponible> horarios = new ArrayList<>();
+        DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+
+        for (int i = 0; i < numDias; i++) {
+            LocalDate fecha = fechaInicio.plusDays(i);
+
+            // Filtrar turnos ocupados para esta fecha específica
+            List<LocalTime> horasOcupadas = turnosOcupados.stream()
+                    .filter(t -> t.getFechaHora().toLocalDate().equals(fecha))
+                    .map(t -> t.getFechaHora().toLocalTime())
+                    .collect(Collectors.toList());
+
+            // Generar todas las horas posibles del día
+            List<String> horasDisponibles = generarHorasDisponibles(horasOcupadas);
+
+            HorarioDisponible hd = new HorarioDisponible();
+            hd.setFecha(fecha.format(dateFormatter));
+            hd.setHorasDisponibles(horasDisponibles);
+            horarios.add(hd);
+        }
+
+        DisponibilidadBarbero disponibilidad = new DisponibilidadBarbero();
+        disponibilidad.setBarberoId(barberoId);
+        disponibilidad.setHorarios(horarios);
+
+        return disponibilidad;
+    }
+
+    private List<String> generarHorasDisponibles(List<LocalTime> horasOcupadas) {
+
+        LocalTime HORA_INICIO = LocalTime.of(9, 0);
+        LocalTime HORA_FIN = LocalTime.of(18, 0);
+        int DURACION_TURNO_MINUTOS = 60;
+
+        List<String> horasDisponibles = new ArrayList<>();
+        LocalTime horaActual = HORA_INICIO;
+        DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm");
+
+        while (horaActual.isBefore(HORA_FIN)) {
+            // Si la hora no está ocupada, agregarla a disponibles
+            final LocalTime horaComparar = horaActual;
+            boolean estaOcupada = horasOcupadas.stream()
+                    .anyMatch(horaOcupada ->
+                            horaOcupada.getHour() == horaComparar.getHour() &&
+                                    horaOcupada.getMinute() == horaComparar.getMinute()
+                    );
+
+            if (!estaOcupada) {
+                horasDisponibles.add(horaActual.format(timeFormatter));
+            }
+
+            horaActual = horaActual.plusMinutes(DURACION_TURNO_MINUTOS);
+        }
+        return horasDisponibles;
+    }
 }
 
 

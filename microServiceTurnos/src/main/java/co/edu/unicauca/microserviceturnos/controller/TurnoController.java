@@ -3,8 +3,10 @@ package co.edu.unicauca.microserviceturnos.controller;
 
 import co.edu.unicauca.microserviceturnos.Excepciones.AccionInvalidaTurnoException;
 import co.edu.unicauca.microserviceturnos.dto.TurnoRequest;
+import co.edu.unicauca.microserviceturnos.entities.DisponibilidadBarbero;
 import co.edu.unicauca.microserviceturnos.dto.TurnoStateResponse;
 import co.edu.unicauca.microserviceturnos.dto.TurnoUpdate;
+import co.edu.unicauca.microserviceturnos.service.NotificacionService;
 import co.edu.unicauca.microserviceturnos.service.TurnoService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -15,13 +17,15 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/reservas")
+@RequestMapping("/turnos")
 @CrossOrigin("*")
 public class TurnoController {
 
     @Autowired
     private TurnoService turnoService;
 
+    @Autowired
+    private NotificacionService notificacionService;
 
     @PostMapping
     public ResponseEntity<?> createTurno(@RequestBody TurnoRequest dto) {
@@ -146,6 +150,20 @@ public class TurnoController {
         }
     }
 
+    @GetMapping("/barberos/{barberoId}/disponibilidad")
+    public ResponseEntity<?> getDisponibilidadBarbero(
+            @PathVariable String barberoId,
+            @RequestParam(required = false) String fechaInicio,
+            @RequestParam(required = false) Integer dias) {
+        try {
+            DisponibilidadBarbero disponibilidad = turnoService.getDisponibilidadBarbero(barberoId, fechaInicio, dias);
+            return ResponseEntity.ok(disponibilidad);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
+    }
 
 
 }

@@ -1,0 +1,17 @@
+server:
+  port: 8091
+
+spring:
+  application:
+    name: microNotificacion
+
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
+
+twilio:
+  account-sid: xxxx
+  auth-token: xxxx
+  from-number: xxxx
