@@ -160,6 +160,12 @@ export class GestionServiciosComponent implements OnInit {
     return servicio.imagen || this.defaultImageUrl;
   }
 
+  onImageError(event: any): void {
+    if (event.target) {
+      event.target.src = this.defaultImageUrl;
+    }
+  }
+
   private markFormGroupTouched(): void {
     Object.keys(this.servicioForm.controls).forEach(key => {
       const control = this.servicioForm.get(key);
