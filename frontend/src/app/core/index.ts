@@ -19,3 +19,6 @@ export * from './interceptors/auth.interceptor';
 
 // Interfaces
 export * from './interfaces';
+
+// Configuration
+export * from './config/api.config';

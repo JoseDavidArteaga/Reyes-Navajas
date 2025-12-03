@@ -121,4 +121,26 @@ public class DataLoader {
         // Construir URL final
         return baseUrl + "/catalogo/imagenes/" + nuevoNombre;
     }
+
+    /**
+     * Crea una imagen por defecto simple si no existe
+     */
+    private void crearImagenPorDefecto() {
+        try {
+            // Verificar si ya existe default-service.jpg en uploads
+            String defaultFileName = "default-service.jpg";
+            ClassPathResource defaultResource = new ClassPathResource("imagenes-default/" + defaultFileName);
+            
+            if (defaultResource.exists()) {
+                // Si existe en resources, copiarla a uploads
+                InputStream is = defaultResource.getInputStream();
+                fileStorageService.guardarArchivoFromStream(is, defaultFileName);
+                System.out.println("✓ Imagen por defecto copiada: " + defaultFileName);
+            } else {
+                System.out.println("⚠ No se encontró imagen por defecto en resources/imagenes-default/");
+            }
+        } catch (IOException e) {
+            System.err.println("Error creando imagen por defecto: " + e.getMessage());
+        }
+    }
 }

@@ -16,6 +16,9 @@ export class GestionServiciosComponent implements OnInit {
   isEditing = signal(false);
   currentServicio: any = null;
   servicioForm: FormGroup;
+  selectedFile: File | null = null;
+  imagePreview: string | null = null;
+  defaultImageUrl = '/assets/images/default-service.svg';
 
   categorias = [
     'Corte',
@@ -35,7 +38,8 @@ export class GestionServiciosComponent implements OnInit {
       descripcion: ['', Validators.required],
       duracion: [45, [Validators.required, Validators.min(30)]],
       precio: ['', [Validators.required, Validators.min(1000)]],
-      categoria: ['']
+      categoria: [''],
+      imagen: [null]
     });
   }
 
@@ -46,6 +50,8 @@ export class GestionServiciosComponent implements OnInit {
   openCreateModal(): void {
     this.isEditing.set(false);
     this.currentServicio = null;
+    this.selectedFile = null;
+    this.imagePreview = null;
     this.servicioForm.reset({
       duracion: 45
     });
@@ -55,6 +61,8 @@ export class GestionServiciosComponent implements OnInit {
   editServicio(servicio: any): void {
     this.isEditing.set(true);
     this.currentServicio = servicio;
+    this.selectedFile = null;
+    this.imagePreview = servicio.imagen || null;
     this.servicioForm.patchValue({
       nombre: servicio.nombre,
       descripcion: servicio.descripcion,
@@ -68,19 +76,36 @@ export class GestionServiciosComponent implements OnInit {
   closeModal(): void {
     this.showModal.set(false);
     this.currentServicio = null;
+    this.selectedFile = null;
+    this.imagePreview = null;
     this.servicioForm.reset();
   }
 
   saveServicio(): void {
     if (this.servicioForm.valid) {
+      const formData = new FormData();
       const servicioData = this.servicioForm.value;
       
+      // Agregar campos del formulario
+      formData.append('nombre', servicioData.nombre);
+      formData.append('descripcion', servicioData.descripcion);
+      formData.append('duracion', servicioData.duracion.toString());
+      formData.append('precio', servicioData.precio.toString());
+      if (servicioData.categoria) {
+        formData.append('categoria', servicioData.categoria);
+      }
+      
+      // Agregar imagen si se seleccionó
+      if (this.selectedFile) {
+        formData.append('imagen', this.selectedFile);
+      }
+      
       if (this.isEditing()) {
-        this.servicioService.updateServicio(this.currentServicio.id, servicioData).subscribe(() => {
+        this.servicioService.updateServicioWithImage(this.currentServicio.id, formData).subscribe(() => {
           this.closeModal();
         });
       } else {
-        this.servicioService.createServicio(servicioData).subscribe(() => {
+        this.servicioService.createServicioWithImage(formData).subscribe(() => {
           this.closeModal();
         });
       }
@@ -101,6 +126,38 @@ export class GestionServiciosComponent implements OnInit {
 
   getStatusBadgeClass(activo: boolean): string {
     return activo ? 'badge badge-success' : 'badge badge-danger';
+  }
+
+  onFileSelected(event: any): void {
+    const file = event.target.files[0];
+    if (file && file.type.startsWith('image/')) {
+      this.selectedFile = file;
+      
+      // Crear preview de la imagen
+      const reader = new FileReader();
+      reader.onload = (e: any) => {
+        this.imagePreview = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    } else {
+      // Resetear si no es una imagen válida
+      this.selectedFile = null;
+      this.imagePreview = null;
+    }
+  }
+
+  removeImage(): void {
+    this.selectedFile = null;
+    this.imagePreview = null;
+    // Resetear el input de archivo
+    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+    if (fileInput) {
+      fileInput.value = '';
+    }
+  }
+
+  getImageUrl(servicio: any): string {
+    return servicio.imagen || this.defaultImageUrl;
   }
 
   private markFormGroupTouched(): void {

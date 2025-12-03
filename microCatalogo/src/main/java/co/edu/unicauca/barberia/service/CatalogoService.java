@@ -53,6 +53,9 @@ public class CatalogoService {
             if (imagen != null && !imagen.isEmpty()) {
                 String nombreArchivo = fileStorageService.guardarArchivo(imagen);
                 servicio.setImagenUrl(baseUrl + "/catalogo/imagenes/" + nombreArchivo);
+            } else {
+                // Asignar imagen por defecto si no se proporciona
+                servicio.setImagenUrl(baseUrl + "/catalogo/imagenes/default-service.jpg");
             }
         } catch (IOException e) {
             throw new RuntimeException("Error al guardar la imagen", e);

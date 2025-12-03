@@ -186,8 +186,17 @@ curl http://localhost:4200
 1. **Login**: Acceder con teléfono y contraseña
 2. **Dashboard**: Vista según el rol (Admin/Barbero/Cliente)
 3. **Gestión de Servicios**: Crear, editar y eliminar servicios (Admin)
+   - ✨ **Nueva funcionalidad**: Agregar imágenes a los servicios
+   - Si no se selecciona imagen, se asigna automáticamente una por defecto
 4. **Reserva de Turnos**: Agendar citas (Cliente)
 5. **Gestión de Turnos**: Administrar citas (Barbero/Admin)
+
+### Gestión de Servicios con Imágenes
+- **Crear Servicio**: Formulario completo con opción de subir imagen
+- **Editar Servicio**: Modificar información y cambiar imagen existente
+- **Imagen por Defecto**: Se asigna automáticamente si no se proporciona una imagen
+- **Formatos Soportados**: JPG, PNG, GIF (máximo 5MB)
+- **Vista Previa**: Muestra la imagen seleccionada antes de guardar
 
 ### Endpoints Principales
 - **Frontend**: http://localhost:4200
