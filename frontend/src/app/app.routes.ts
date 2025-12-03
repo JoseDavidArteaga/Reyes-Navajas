@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { authGuard, adminGuard, barberoGuard, clienteGuard, guestGuard } from './core';
+import { BarberoActiveGuard } from './core/guards/barbero-active.guard';
 
 export const routes: Routes = [
   // Ruta por defecto
@@ -18,6 +19,12 @@ export const routes: Routes = [
     path: 'registro',
     loadComponent: () => import('./features/auth/register.component').then(m => m.RegisterComponent),
     canActivate: [guestGuard]
+  },
+
+  // Ruta para cuenta deshabilitada
+  {
+    path: 'account-disabled',
+    loadComponent: () => import('./features/auth/account-disabled/account-disabled.component').then(m => m.AccountDisabledComponent)
   },
 
   // Rutas protegidas - Cliente
@@ -44,7 +51,7 @@ export const routes: Routes = [
   // Rutas protegidas - Barbero
   {
     path: 'barbero',
-    canActivate: [authGuard, barberoGuard],
+    canActivate: [authGuard, barberoGuard, BarberoActiveGuard],
     children: [
       {
         path: 'agenda-diaria',

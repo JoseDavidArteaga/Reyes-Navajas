@@ -2,7 +2,7 @@ import { Injectable, computed, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { Observable, BehaviorSubject, of } from 'rxjs';
-import { map, tap, catchError } from 'rxjs/operators';
+import { map, tap, catchError, switchMap } from 'rxjs/operators';
 import { Usuario, UserRole, LoginRequest, LoginResponse, RegisterRequest, ApiResponse } from '../interfaces';
 
 @Injectable({
@@ -36,7 +36,32 @@ export class AuthService {
   ) {}
 
   login(credentials: LoginRequest): Observable<any> {
-    return this.loginWithKeycloak(credentials.username, credentials.password);
+    return this.loginWithKeycloak(credentials.username, credentials.password).pipe(
+      switchMap(loginResponse => {
+        // Después del login exitoso, verificar el estado si es barbero
+        const currentUser = this.currentUserSignal();
+        if (currentUser && currentUser.rol === UserRole.BARBERO) {
+          return this.checkUserStatus(currentUser.nombre).pipe(
+            map(userStatus => {
+              if (userStatus.estado === false) {
+                // Si el barbero está inactivo, agregar información al response
+                return {
+                  ...loginResponse,
+                  userInactive: true,
+                  message: 'Usuario desactivado'
+                };
+              }
+              return loginResponse;
+            }),
+            catchError(statusError => {
+              console.warn('No se pudo verificar el estado del usuario:', statusError);
+              return of(loginResponse); // Continuar con el login normal si falla la verificación
+            })
+          );
+        }
+        return of(loginResponse);
+      })
+    );
   }
 
   loginWithKeycloak(username: string, password: string): Observable<any> {
@@ -211,5 +236,23 @@ export class AuthService {
   hasAnyRole(roles: UserRole[]): boolean {
     const currentRole = this.userRole();
     return currentRole ? roles.includes(currentRole) : false;
+  }
+
+  // Verificar el estado del usuario en el backend
+  checkUserStatus(username: string): Observable<any> {
+    return this.http.get<any>(`http://localhost:8089/usuarios/name/${username}`);
+  }
+
+  // Verificar si un barbero está activo
+  isBarberoActive(username: string): Observable<boolean> {
+    return this.checkUserStatus(username).pipe(
+      map(response => {
+        return response.estado === true;
+      }),
+      catchError(error => {
+        console.error('Error checking barbero status:', error);
+        return of(false);
+      })
+    );
   }
 }

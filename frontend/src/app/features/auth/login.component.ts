@@ -45,6 +45,13 @@ export class LoginComponent {
       
       this.authService.login(credentials).subscribe({
         next: (response) => {
+          // Verificar si el usuario está inactivo
+          if (response.userInactive) {
+            this.toastr.warning('Tu cuenta ha sido deshabilitada', 'Acceso Restringido');
+            this.router.navigate(['/account-disabled']);
+            return;
+          }
+
           // Keycloak retorna directamente { access_token, refresh_token, expires_in }
           // El servicio ya procesó la respuesta en handleTokenResponse()
           this.toastr.success('¡Bienvenido!', 'Login exitoso');
