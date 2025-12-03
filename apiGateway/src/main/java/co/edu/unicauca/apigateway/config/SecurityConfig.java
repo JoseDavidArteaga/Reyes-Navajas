@@ -37,6 +37,7 @@ public class SecurityConfig {
                 // ------------------------------------
                 .pathMatchers("/auth/**").permitAll()
                 .pathMatchers("/usuarios/registro").permitAll()
+                .pathMatchers("/usuarios/name/**").permitAll()
                 .pathMatchers("/actuator/health").permitAll()
                 .pathMatchers("/catalogo/imagenes/**").permitAll()
 

@@ -48,7 +48,7 @@ spring:
         #  Microservicio de Usuarios
         # ----------------------------------
         - id: usuarios-service
-          uri: http://localhost:8085 # <--- ¡CORREGIDO! Apuntando al puerto 8085 del Microservicio de Usuarios
+          uri: http://localhost:8085
           predicates:
             - Path=/usuarios/**
           filters:

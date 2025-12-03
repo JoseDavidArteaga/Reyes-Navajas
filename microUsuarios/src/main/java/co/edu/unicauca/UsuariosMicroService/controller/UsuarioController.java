@@ -171,5 +171,24 @@ public class UsuarioController {
 
         return ResponseEntity.ok(dto);
     }
+    @GetMapping("/name/{name}")
+    public ResponseEntity<?> getUsuarioByName(@PathVariable String name) {
+
+        Optional<User> opt = service.findByNombre(name);
+        if (opt.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body("Usuario no encontrado");
+        }
+
+        User u = opt.get();
+
+        UsuarioResumenDTO dto = new UsuarioResumenDTO();
+        dto.setId(String.valueOf(u.getId()));
+        dto.setNombre(u.getNombre());
+        dto.setTelefono(u.getTelefono());
+        dto.setRol(u.getRol());
+
+        return ResponseEntity.ok(dto);
+    }
 }
 

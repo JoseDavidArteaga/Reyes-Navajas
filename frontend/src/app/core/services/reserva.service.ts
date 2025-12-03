@@ -1,6 +1,6 @@
 import { Injectable, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, of } from 'rxjs';
+import { Observable, of,catchError, map } from 'rxjs'; 
 import { tap } from 'rxjs/operators';
 import { 
   Reserva, 
@@ -18,7 +18,7 @@ import { addDays, format, isAfter, isBefore, setHours, setMinutes } from 'date-f
   providedIn: 'root'
 })
 export class ReservaService {
-  private readonly API_URL = 'http://localhost:8088/api/reservas';
+  private readonly API_URL = 'http://localhost:8089/turnos';
   private reservasSignal = signal<Reserva[]>([]);
   private isLoadingSignal = signal<boolean>(false);
 
@@ -87,20 +87,51 @@ export class ReservaService {
     });
   }
 
-  getReservasByBarbero(barberoId: string, fecha?: Date): Observable<ApiResponse<Reserva[]>> {
-    let reservasBarbero = this.mockReservas.filter(r => r.barberoId === barberoId);
-    
-    if (fecha) {
-      const fechaStr = format(fecha, 'yyyy-MM-dd');
-      reservasBarbero = reservasBarbero.filter(r => 
-        format(r.fechaHora, 'yyyy-MM-dd') === fechaStr
-      );
-    }
-    
-    return of({
-      success: true,
-      data: reservasBarbero
-    });
+  getReservasByBarbero(barberoId: string, fecha: Date): Observable<ApiResponse<Reserva[]>> {
+    this.isLoadingSignal.set(true);
+
+    const fechaStr = format(fecha, 'yyyy-MM-dd');
+
+    // 1. Define la URL del endpoint para obtener TODAS las citas del barbero (sin filtro de fecha)
+    // Usamos 'barbero' en singular según el endpoint proporcionado: @GetMapping("/barbero/{id}")
+    const url = `${this.API_URL}/barbero/${barberoId}`;
+    console.log(`[HTTP Request Log] Intentando obtener agenda: GET ${url}`);
+    // 2. Realiza la petición HTTP GET para TODAS las reservas del barbero
+    return this.http.get<ApiResponse<Reserva[]>>(url).pipe(
+      map((response: ApiResponse<Reserva[]>) => { // Tipado explícito para 'response'
+        this.isLoadingSignal.set(false);
+        
+        if (response.success && response.data) {
+            // 3. Filtramos la lista COMPLETA de reservas devuelta por la API, por la fecha solicitada
+            const reservasFiltradas = response.data.filter((r: Reserva) => { // Tipado explícito para 'r'
+                // Asumimos que r.fechaHora es un string ISO 8601 del backend.
+                return format(new Date(r.fechaHora), 'yyyy-MM-dd') === fechaStr;
+            });
+
+            return { 
+                ...response, 
+                data: reservasFiltradas 
+            } as ApiResponse<Reserva[]>;
+
+        }
+        return response; // Devuelve la respuesta original (posiblemente con error/sin datos)
+      }),
+      catchError((error: any) => { // Tipado explícito para 'error'
+        console.error('Error al obtener reservas por barbero (llamada completa):', error);
+        this.isLoadingSignal.set(false);
+
+        // Si la llamada falla, devolvemos un mock de un subconjunto de reservas
+        const fallbackReservas = this.mockReservas.filter(r => 
+          r.barberoId === barberoId && 
+          format(r.fechaHora, 'yyyy-MM-dd') === fechaStr
+        );
+        return of({ 
+          success: false, 
+          data: fallbackReservas, 
+          message: 'Error de conexión. Mostrando datos de prueba.' 
+        });
+      })
+    );
   }
 
 /*   createReserva(reserva: CreateReservaRequest): Observable<ApiResponse<Reserva>> {
@@ -193,21 +224,86 @@ export class ReservaService {
     );
   }
 
-  cancelarReserva(id: string): Observable<ApiResponse<Reserva>> {
-    return this.updateReserva(id, { estado: EstadoReserva.CANCELADA });
-  }
+cancelarReserva(id: string): Observable<ApiResponse<Reserva>> {
+  this.isLoadingSignal.set(true);
+  const url = `http://localhost:8089/turnos/${id}/cancelar`;
+  
+  return this.http.post<ApiResponse<Reserva>>(url, {}).pipe(
+    tap(() => this.isLoadingSignal.set(false)),
+    catchError(error => {
+      console.error('Error al cancelar:', error);
+      this.isLoadingSignal.set(false);
+      return of({ success: false, data: null as any, message: 'Error' });
+    })
+  );
+}
 
-  confirmarReserva(id: string): Observable<ApiResponse<Reserva>> {
-    return this.updateReserva(id, { estado: EstadoReserva.CONFIRMADA });
-  }
+confirmarReserva(id: string): Observable<ApiResponse<Reserva>> {
+  this.isLoadingSignal.set(true);
+  const url = `http://localhost:8089/turnos/${id}/confirmar`;
+  
+  return this.http.post<ApiResponse<Reserva>>(url, {}).pipe(
+    tap(() => this.isLoadingSignal.set(false)),
+    catchError(error => {
+      console.error('Error al confirmar:', error);
+      this.isLoadingSignal.set(false);
+      return of({ success: false, data: null as any, message: 'Error' });
+    })
+  );
+}
 
-  iniciarServicio(id: string): Observable<ApiResponse<Reserva>> {
-    return this.updateReserva(id, { estado: EstadoReserva.EN_PROGRESO });
-  }
+iniciarServicio(id: string): Observable<ApiResponse<Reserva>> {
+  this.isLoadingSignal.set(true);
+  const url = `http://localhost:8089/turnos/${id}/iniciar`;
+  
+  return this.http.post<ApiResponse<Reserva>>(url, {}).pipe(
+    tap(() => this.isLoadingSignal.set(false)),
+    catchError(error => {
+      console.error('Error al iniciar:', error);
+      this.isLoadingSignal.set(false);
+      return of({ success: false, data: null as any, message: 'Error' });
+    })
+  );
+}
 
-  finalizarServicio(id: string): Observable<ApiResponse<Reserva>> {
-    return this.updateReserva(id, { estado: EstadoReserva.FINALIZADA });
-  }
+finalizarServicio(id: string): Observable<ApiResponse<Reserva>> {
+  this.isLoadingSignal.set(true);
+  const url = `http://localhost:8089/turnos/${id}/finalizar`;
+  
+  return this.http.post<ApiResponse<Reserva>>(url, {}).pipe(
+    tap(() => this.isLoadingSignal.set(false)),
+    catchError(error => {
+      console.error('Error al finalizar:', error);
+      this.isLoadingSignal.set(false);
+      return of({ success: false, data: null as any, message: 'Error' });
+    })
+  );
+}
+marcarNoAsistio(id: string): Observable<ApiResponse<Reserva>> {
+  this.isLoadingSignal.set(true);
+  
+  const url = `http://localhost:8089/api/reservas/${id}/no-asistio`;
+  
+  return this.http.post<ApiResponse<Reserva>>(url, {}).pipe(
+    tap(response => {
+      if (response.success) {
+        // Actualizar la lista local si es necesario
+        const reservas = this.reservasSignal();
+        const index = reservas.findIndex(r => r.id === id);
+        if (index !== -1) {
+          reservas[index] = { ...reservas[index], estado: EstadoReserva.NO_ASISTIO };
+          this.reservasSignal.set([...reservas]);
+        }
+      }
+      this.isLoadingSignal.set(false);
+    }),
+    catchError(error => {
+      console.error('Error al marcar no asistió:', error);
+      this.isLoadingSignal.set(false);
+      return of({ success: false, data: null as any, message: 'Error al actualizar' });
+    })
+  );
+}
 
   getDisponibilidadBarbero(barberoId: string, fechaInicio: Date, dias: number = 7): Observable<ApiResponse<DisponibilidadBarbero>> {
     const horarios: HorarioDisponible[] = [];
