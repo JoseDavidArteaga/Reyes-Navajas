@@ -3,11 +3,14 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import co.edu.unicauca.UsuariosMicroService.entities.User;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface UsuarioRepository extends JpaRepository<User, Long>  {
     Optional<User> findByNombreAndContrasenia(String nombre, String password);
 
     Optional<User> findByNombre(String nombre);
+    
+    List<User> findByRol(String rol);
 }
 

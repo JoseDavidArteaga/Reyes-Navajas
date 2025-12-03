@@ -15,7 +15,7 @@ keycloak:
   auth-server-url: http://localhost:8080
   realm: MicroservicesBarber
   client-id: auth-service
-  client-secret: vZrnQdFL5ZCJYH5JAvmkFUvDkSrglPa4
+  client-secret: PL8IqDY9NnSpW7kMGH7DWSPv29fjdx2X
 
 management:
   endpoints:

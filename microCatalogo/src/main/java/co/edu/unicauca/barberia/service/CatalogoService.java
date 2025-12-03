@@ -53,6 +53,9 @@ public class CatalogoService {
             if (imagen != null && !imagen.isEmpty()) {
                 String nombreArchivo = fileStorageService.guardarArchivo(imagen);
                 servicio.setImagenUrl(baseUrl + "/catalogo/imagenes/" + nombreArchivo);
+            } else {
+                // Asignar imagen por defecto si no se proporciona
+                servicio.setImagenUrl(baseUrl + "/catalogo/imagenes-default/default-service.jpg");
             }
         } catch (IOException e) {
             throw new RuntimeException("Error al guardar la imagen", e);
@@ -161,6 +164,18 @@ public class CatalogoService {
         }
 
         catalogoRepository.delete(servicio);
+    }
+
+    // CAMBIAR ESTADO DEL SERVICIO (ACTIVAR/DESACTIVAR)
+    public ServicioDTORespuesta cambiarEstadoServicio(Long id, Boolean nuevoEstado) {
+        Servicio servicio = catalogoRepository.findById(id)
+                .orElseThrow(() -> new RecursoNoEncontradoException(
+                        "Servicio no encontrado con id: " + id));
+        
+        servicio.setEstado(nuevoEstado);
+        Servicio actualizado = catalogoRepository.save(servicio);
+        
+        return modelMapper.map(actualizado, ServicioDTORespuesta.class);
     }
 
     private String extraerNombreArchivo(String urlImagen) {

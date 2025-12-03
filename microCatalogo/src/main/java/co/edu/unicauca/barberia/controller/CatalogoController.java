@@ -18,7 +18,6 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/catalogo")
-// @CrossOrigin(origins = "http://localhost:4200") // si lo necesitas para Angular
 @RequiredArgsConstructor
 public class CatalogoController {
 
@@ -105,6 +104,18 @@ public class CatalogoController {
     }
 
     // -------------------------------------------------------------
+    // 6. CAMBIAR ESTADO DEL SERVICIO (ACTIVAR/DESACTIVAR)
+    // -------------------------------------------------------------
+    @PutMapping("/servicios/{id}/estado")
+    public ResponseEntity<ServicioDTORespuesta> cambiarEstadoServicio(
+            @PathVariable Long id,
+            @RequestParam("estado") Boolean nuevoEstado) {
+        
+        ServicioDTORespuesta actualizado = catalogoService.cambiarEstadoServicio(id, nuevoEstado);
+        return ResponseEntity.ok(actualizado);
+    }
+
+    // -------------------------------------------------------------
     // 6. OBTENER IMAGEN
     // -------------------------------------------------------------
     @GetMapping("/imagenes/{nombre}")
@@ -119,5 +130,30 @@ public class CatalogoController {
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_TYPE, contentType)
                 .body(recurso);
+    }
+
+    // -------------------------------------------------------------
+    // 7. OBTENER IMAGEN POR DEFECTO DESDE RESOURCES
+    // -------------------------------------------------------------
+    @GetMapping("/imagenes-default/{nombre}")
+    public ResponseEntity<Resource> obtenerImagenPorDefecto(@PathVariable String nombre) throws Exception {
+        try {
+            Resource recurso = new org.springframework.core.io.ClassPathResource("imagenes-default/" + nombre);
+            
+            if (!recurso.exists()) {
+                return ResponseEntity.notFound().build();
+            }
+
+            String contentType = Files.probeContentType(recurso.getFile().toPath());
+            if (contentType == null) {
+                contentType = "application/octet-stream";
+            }
+
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_TYPE, contentType)
+                    .body(recurso);
+        } catch (Exception e) {
+            return ResponseEntity.notFound().build();
+        }
     }
 }
