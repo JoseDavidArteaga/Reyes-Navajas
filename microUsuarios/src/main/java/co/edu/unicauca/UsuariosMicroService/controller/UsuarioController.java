@@ -5,17 +5,25 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 
 import co.edu.unicauca.UsuariosMicroService.entities.User;
 import co.edu.unicauca.UsuariosMicroService.infra.dto.UsuarioRequest;
 import co.edu.unicauca.UsuariosMicroService.service.UsuarioService;
+import co.edu.unicauca.UsuariosMicroService.infra.exception.UserAlreadyExistsException;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @RestController
 @RequestMapping("/usuarios")
 public class UsuarioController {
+
+    private static final Logger log = LoggerFactory.getLogger(UsuarioController.class);
 
     @Autowired
     private UsuarioService service;
@@ -24,11 +32,68 @@ public class UsuarioController {
     // 1. REGISTRO PÚBLICO (solo clientes)
     // -------------------------------------------
     @PostMapping("/registro")
-    public ResponseEntity<User> registrarCliente(@RequestBody UsuarioRequest newUser) {
-        newUser.setRol("cliente");        // Asigna rol CLIENTE automáticamente
-        newUser.setEstado(true);          // El cliente se registra activo
-        User saved = service.save(newUser);
-        return ResponseEntity.status(HttpStatus.CREATED).body(saved);
+    public ResponseEntity<?> registrarCliente(@RequestBody UsuarioRequest newUser) {
+        try {
+            // Validaciones básicas
+            if (newUser.getNombre() == null || newUser.getNombre().trim().isEmpty()) {
+                return ResponseEntity.badRequest()
+                    .body(Map.of("success", false, "message", "El nombre es requerido"));
+            }
+            
+            if (newUser.getTelefono() == null || newUser.getTelefono().trim().isEmpty()) {
+                return ResponseEntity.badRequest()
+                    .body(Map.of("success", false, "message", "El teléfono es requerido"));
+            }
+            
+            if (newUser.getContrasenia() == null || newUser.getContrasenia().length() < 6) {
+                return ResponseEntity.badRequest()
+                    .body(Map.of("success", false, "message", "La contraseña debe tener mínimo 6 caracteres"));
+            }
+            
+            log.info("Iniciando registro de nuevo cliente: {}", newUser.getNombre());
+            
+            // Asignar rol por defecto
+            newUser.setRol("cliente");
+            newUser.setEstado(true);
+            
+            // Guardar usuario
+            User saved = service.save(newUser);
+            
+            log.info("Cliente registrado exitosamente: {} (ID: {})", saved.getNombre(), saved.getId());
+            
+            // Respuesta exitosa
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "Usuario registrado exitosamente");
+            response.put("id", saved.getId());
+            response.put("nombre", saved.getNombre());
+            response.put("telefono", saved.getTelefono());
+            response.put("rol", saved.getRol());
+            
+            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+            
+        } catch (UserAlreadyExistsException e) {
+            log.warn("Intento de registro con usuario duplicado: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(Map.of(
+                    "success", false, 
+                    "message", "El nombre de usuario '" + newUser.getNombre() + "' ya está registrado"
+                ));
+        } catch (DataIntegrityViolationException e) {
+            log.warn("Violación de integridad al registrar usuario: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(Map.of(
+                    "success", false, 
+                    "message", "El nombre de usuario ya está registrado"
+                ));
+        } catch (Exception e) {
+            log.error("Error inesperado al registrar cliente: ", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of(
+                    "success", false, 
+                    "message", "Error interno del servidor al crear la cuenta"
+                ));
+        }
     }
 
 
@@ -37,6 +102,7 @@ public class UsuarioController {
     // -------------------------------------------
     @PostMapping("")
     public ResponseEntity<User> createUser(@RequestBody UsuarioRequest newUser) {
+        log.info("Creando usuario: {} con rol: {}", newUser.getNombre(), newUser.getRol());
         // Aquí se respeta el rol enviado: administrador, barbero, cliente
         User saved = service.save(newUser);
         return ResponseEntity.status(HttpStatus.CREATED).body(saved);
@@ -106,3 +172,4 @@ public class UsuarioController {
         return ResponseEntity.ok(dto);
     }
 }
+

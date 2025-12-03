@@ -6,6 +6,8 @@ import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import co.edu.unicauca.UsuariosMicroService.entities.User;
 import co.edu.unicauca.UsuariosMicroService.infra.config.RabbitMQConfig;
@@ -20,10 +22,12 @@ import org.modelmapper.ModelMapper;
 @Service
 public class UsuarioService {
  
+    private static final Logger log = LoggerFactory.getLogger(UsuarioService.class);
+    
     ModelMapper modelMapper = new ModelMapper();
     @Autowired
     private UsuarioRepository repository;
-       @Autowired
+    @Autowired
     private RabbitTemplate rabbitTemplate;
 
     public Optional<User> findByNombreAndContrasenia(String nombre, String password) {
@@ -32,7 +36,7 @@ public class UsuarioService {
 
     @Transactional
     public Optional<User> findByNombre(String nombre) {
-        System.out.println("consultando usuario en repositorio");
+        log.debug("Buscando usuario por nombre: {}", nombre);
         return repository.findByNombre(nombre);
     }
 
@@ -40,56 +44,60 @@ public class UsuarioService {
     public Optional<User> findById(Long id) {
         return repository.findById(id);
     }
-   @Transactional
-public User save(UsuarioRequest usuarioRequest) {
     
+    @Transactional
+    public User save(UsuarioRequest usuarioRequest) {
+        
+        log.info("Iniciando guardado de usuario: {}", usuarioRequest.getNombre());
+        
         if (repository.findByNombre(usuarioRequest.getNombre()).isPresent()) {
-            throw new co.edu.unicauca.UsuariosMicroService.infra.exception.UserAlreadyExistsException(
-                    "El nombre de usuario '" + usuarioRequest.getNombre() + "' ya está en uso");
+            String msg = "El nombre de usuario '" + usuarioRequest.getNombre() + "' ya está en uso";
+            log.warn(msg);
+            throw new co.edu.unicauca.UsuariosMicroService.infra.exception.UserAlreadyExistsException(msg);
         }
     
-    User user = User.builder()
-            .nombre(usuarioRequest.getNombre())
-            .contrasenia(usuarioRequest.getContrasenia())
-            .telefono(usuarioRequest.getTelefono())
-            .rol(usuarioRequest.getRol())
-            .estado(usuarioRequest.isEstado())
-            .build();
-    
-    try {
-        User savedUser = repository.save(user);
+        User user = User.builder()
+                .nombre(usuarioRequest.getNombre())
+                .contrasenia(usuarioRequest.getContrasenia())
+                .telefono(usuarioRequest.getTelefono())
+                .rol(usuarioRequest.getRol())
+                .estado(usuarioRequest.isEstado())
+                .build();
         
         try {
-            UserCreateRequest event = new UserCreateRequest();
-            event.setUsername(savedUser.getNombre());
-            event.setPassword(savedUser.getContrasenia()); 
-            event.setEmail(
-                savedUser.getTelefono() != null && savedUser.getTelefono().contains("@")
-                    ? savedUser.getTelefono()
-                    : savedUser.getNombre() + "@barberia.com"
-            );
-            event.setRole(savedUser.getRol() != null ? savedUser.getRol().toLowerCase() : "cliente");
+            User savedUser = repository.save(user);
+            log.info("Usuario guardado exitosamente: {} (ID: {})", savedUser.getNombre(), savedUser.getId());
+            
+            try {
+                UserCreateRequest event = new UserCreateRequest();
+                event.setUsername(savedUser.getNombre());
+                event.setPassword(savedUser.getContrasenia()); 
+                event.setEmail(this.generateEmail(savedUser));
+                event.setRole(savedUser.getRol() != null ? savedUser.getRol().toLowerCase() : "cliente");
 
-            rabbitTemplate.convertAndSend(RabbitMQConfig.USER_QUEUE_CREATED, event);
-        } catch (Exception e) {
-            System.err.printf("No se pudo enviar evento a RabbitMQ (usuario creado igual): %s%n", e.getMessage());
+                rabbitTemplate.convertAndSend(RabbitMQConfig.USER_QUEUE_CREATED, event);
+                log.debug("Evento RabbitMQ publicado para usuario: {}", savedUser.getNombre());
+            } catch (Exception e) {
+                log.warn("No se pudo enviar evento RabbitMQ para usuario {}: {}", 
+                         savedUser.getNombre(), e.getMessage());
+                // El usuario se guardó igual, solo falló la sincronización
+            }
 
+            return savedUser; 
+
+        } catch (DataIntegrityViolationException e) {
+            log.error("Error de integridad al guardar usuario: {}", e.getMessage());
+            String msg = e.getMessage() != null ? e.getMessage() : "Violación de integridad de datos";
+            if (msg.toLowerCase().contains("duplicate") || msg.toLowerCase().contains("duplicate entry") || msg.toLowerCase().contains("uc_users_nombre")) {
+                throw new co.edu.unicauca.UsuariosMicroService.infra.exception.UserAlreadyExistsException("El nombre de usuario ya existe (violación de unicidad)", e);
+            }
+            throw new RuntimeException("Error al guardar el usuario: " + msg, e);
         }
-
-        return savedUser; 
-
-    } catch (DataIntegrityViolationException e) {
-        String msg = e.getMessage() != null ? e.getMessage() : "Violación de integridad de datos";
-        if (msg.toLowerCase().contains("duplicate") || msg.toLowerCase().contains("duplicate entry") || msg.toLowerCase().contains("uc_users_nombre")) {
-            throw new co.edu.unicauca.UsuariosMicroService.infra.exception.UserAlreadyExistsException("El nombre de usuario ya existe (violación de unicidad)", e);
+        catch (Exception e) {
+            log.error("Error inesperado al crear usuario {}: ", usuarioRequest.getNombre(), e);
+            throw new RuntimeException("Error interno del servidor al crear el usuario", e);
         }
-        throw new RuntimeException("Error al guardar el usuario: " + msg, e);
     }
-    catch (Exception e) {
-        System.err.printf("Error inesperado al crear usuario: %s\n", e.getMessage());
-        throw new RuntimeException("Error interno del servidor al crear el usuario", e);
-    }
-}
 
     @Transactional
     public User updateUsuario(User existingusuario, UsuarioRequest usuariomodificado) throws Exception {
@@ -107,6 +115,7 @@ public User save(UsuarioRequest usuarioRequest) {
             existingusuario.setEstado(usuariomodificado.isEstado());
         }
         User updated = repository.save(existingusuario);
+        log.info("Usuario actualizado: {} (ID: {})", updated.getNombre(), updated.getId());
 
         // Publish update message so AuthMicroService can sync roles / enabled state
         try {
@@ -116,8 +125,9 @@ public User save(UsuarioRequest usuarioRequest) {
             update.setRole(updated.getRol());
             update.setEnabled(updated.isEstado());
             rabbitTemplate.convertAndSend(RabbitMQConfig.USER_QUEUE_UPDATED, update);
+            log.debug("Evento de actualización publicado para usuario: {}", updated.getNombre());
         } catch (Exception e) {
-            System.err.println("Error publicando evento de actualización de usuario: " + e.getMessage());
+            log.warn("Error publicando evento de actualización de usuario: {}", e.getMessage());
         }
 
         return updated;
@@ -125,6 +135,11 @@ public User save(UsuarioRequest usuarioRequest) {
 
     public List<User> findAll() throws Exception {
         return repository.findAll();
-
+    }
+    
+    private String generateEmail(User user) {
+        return user.getTelefono() != null && user.getTelefono().contains("@") ? 
+               user.getTelefono() : 
+               user.getNombre() + "@barberia.com";
     }
 }

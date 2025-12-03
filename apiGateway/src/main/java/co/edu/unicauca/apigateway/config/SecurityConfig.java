@@ -12,6 +12,11 @@ import org.springframework.security.oauth2.server.resource.authentication.Reacti
 import org.springframework.security.web.server.SecurityWebFilterChain;
 import lombok.RequiredArgsConstructor;
 import reactor.core.publisher.Mono;
+import org.springframework.http.HttpMethod;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.reactive.CorsWebFilter;
+import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource;
+import java.util.Arrays;
 
 @Configuration
 @EnableWebFluxSecurity
@@ -24,6 +29,16 @@ public class SecurityConfig {
     public SecurityWebFilterChain filterChain(ServerHttpSecurity http) {
 
         http.authorizeExchange(exchanges -> exchanges
+                // Allow CORS preflight requests
+                .pathMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+
+                // ------------------------------------
+                //          ENDPOINTS PÚBLICOS
+                // ------------------------------------
+                .pathMatchers("/auth/**").permitAll()
+                .pathMatchers("/usuarios/registro").permitAll()
+                .pathMatchers("/actuator/health").permitAll()
+                .pathMatchers("/catalogo/imagenes/**").permitAll()
 
                 // ------------------------------------
                 //     LLAMADAS INTERNAS (sin JWT)
@@ -61,14 +76,6 @@ public class SecurityConfig {
                 })
 
                 // ------------------------------------
-                //          ENDPOINTS PÚBLICOS
-                // ------------------------------------
-                .pathMatchers("/auth/**").permitAll()
-                .pathMatchers("/usuarios/registro").permitAll()
-                .pathMatchers("/actuator/health").permitAll()
-                .pathMatchers("/catalogo/imagenes/**").permitAll()
-
-                // ------------------------------------
                 //          ENDPOINTS PROTEGIDOS
                 // ------------------------------------
                 .pathMatchers("/catalogo/**").hasAnyRole("ADMINISTRADOR", "BARBERO", "CLIENTE")
@@ -93,4 +100,19 @@ public class SecurityConfig {
         converter.setJwtGrantedAuthoritiesConverter(jwtRoleConverter);
         return new ReactiveJwtAuthenticationConverterAdapter(converter);
     }
+
+        @Bean
+        public CorsWebFilter corsWebFilter() {
+                CorsConfiguration config = new CorsConfiguration();
+                // Permitir todos los orígenes (CORS abierto)
+                config.setAllowedOriginPatterns(Arrays.asList("*"));
+                config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+                config.setAllowedHeaders(Arrays.asList("*"));
+                // Permitir credenciales si es necesario (cookies/authorization)
+                config.setAllowCredentials(true);
+
+                UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+                source.registerCorsConfiguration("/**", config);
+                return new CorsWebFilter(source);
+        }
 }
