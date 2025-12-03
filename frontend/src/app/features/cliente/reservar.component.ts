@@ -1,8 +1,9 @@
 import { Component, inject, signal, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
-import { ServicioService, BarberoService, ReservaService } from '../../core';
+import { ServicioService, BarberoService, ReservaService, AuthService } from '../../core';
 import { LoadingSpinnerComponent } from '../../shared';
+import { ToastrService } from 'ngx-toastr';
 
 @Component({
   selector: 'app-reservar',
@@ -13,10 +14,13 @@ import { LoadingSpinnerComponent } from '../../shared';
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ReservarComponent {
+
   private readonly servicioService = inject(ServicioService);
   private readonly barberoService = inject(BarberoService);
   private readonly reservaService = inject(ReservaService);
+  private readonly authService = inject(AuthService);
   private readonly fb = inject(FormBuilder);
+  private readonly toastr = inject(ToastrService);
 
   servicios = this.servicioService.servicios;
   barberos = this.barberoService.barberos;
@@ -29,6 +33,8 @@ export class ReservarComponent {
 
   barberosDisponibles = signal<any[]>([]);
   horasDisponibles = signal<string[]>([]);
+  availableHours = signal<Set<string>>(new Set());
+  hasAvailabilityData = signal<boolean>(false);
 
   minDate: string;
   maxDate: string;
@@ -59,13 +65,16 @@ export class ReservarComponent {
     this.selectedService.set(servicio);
     this.reservaForm.patchValue({ servicio: servicio.id });
 
-    const filtrados = this.barberos().filter(b =>
-      b.especialidades?.some((e: string) =>
-        e.toLowerCase().includes(servicio.categoria?.toLowerCase() || '')
-      )
-    );
-
-    this.barberosDisponibles.set(filtrados);
+    this.barberoService.getAllBarberos().subscribe({
+      next: (resp: any) => {
+        const data = resp?.data ?? resp;
+        this.barberosDisponibles.set(data);
+      },
+      error: (err: any) => {
+        console.warn('Error obteniendo barberos:', err);
+        this.barberosDisponibles.set(this.barberos());
+      }
+    });
 
     if (this.currentStep() === 1) this.nextStep();
   }
@@ -73,6 +82,7 @@ export class ReservarComponent {
   selectBarbero(barbero: any): void {
     this.selectedBarbero.set(barbero);
     this.reservaForm.patchValue({ barbero: barbero.id });
+    this.loadDisponibilidadBarbero();
 
     if (this.currentStep() === 2) this.nextStep();
   }
@@ -82,10 +92,52 @@ export class ReservarComponent {
     this.reservaForm.patchValue({ hora });
   }
 
+  onFechaChange(): void {
+    if (this.selectedBarbero()) {
+      this.loadDisponibilidadBarbero();
+    }
+  }
+
+  private loadDisponibilidadBarbero(): void {
+  if (!this.selectedBarbero()) return;
+
+  const fechaStr =
+    this.reservaForm.get('fecha')?.value ||
+    new Date().toISOString().split('T')[0];
+
+  this.reservaService
+    .getDisponibilidadBarbero(this.selectedBarbero().id, new Date(fechaStr), 1)
+    .subscribe({
+      next: (resp) => {
+        const horas = this.reservaService.mapHorasDisponiblesPorFecha(
+          resp.data ?? resp,
+          fechaStr
+        );
+
+        if (horas && horas.length > 0) {
+          this.availableHours.set(new Set(horas));
+          this.hasAvailabilityData.set(true);
+        } else {
+          this.availableHours.set(new Set());
+          this.hasAvailabilityData.set(false);
+        }
+
+        this.generateHorasDisponibles();
+      },
+      error: (err) => {
+        console.warn('Error obteniendo disponibilidad del barbero:', err);
+        this.availableHours.set(new Set());
+        this.hasAvailabilityData.set(false);
+        this.generateHorasDisponibles();
+      }
+    });
+}
+
+
+
   nextStep(): void {
     if (this.isStepValid(this.currentStep())) {
       this.currentStep.set(this.currentStep() + 1);
-
       if (this.currentStep() === 3) {
         this.generateHorasDisponibles();
       }
@@ -116,7 +168,9 @@ export class ReservarComponent {
   }
 
   isTimeAvailable(hora: string): boolean {
-    return true;
+    const set = this.availableHours();
+    if (!this.hasAvailabilityData()) return true;
+    return set.has(hora);
   }
 
   getSelectedServicePrice(): number {
@@ -131,19 +185,33 @@ export class ReservarComponent {
   }
 
   onSubmit(): void {
-    if (this.reservaForm.valid) {
-      const data = {
-        servicioId: this.selectedService()?.id,
-        barberoId: this.selectedBarbero()?.id,
-        fechaHora: `${this.reservaForm.get('fecha')?.value}T${this.reservaForm.get('hora')?.value}`,
-        notas: this.reservaForm.get('notas')?.value || ''
-      };
+    if (!this.reservaForm.valid) return;
 
-      this.reservaService.createReserva(data).subscribe({
-        next: resp => console.log('Reserva creada', resp),
-        error: err => console.error('Error', err)
-      });
-    }
+    const fecha = this.reservaForm.get('fecha')?.value;
+    const hora = this.reservaForm.get('hora')?.value;
+
+    const fechaHora = `${fecha}T${hora}:00`;
+
+    const data = {
+      clienteId: this.authService.currentUser()?.id,
+      servicioId: this.selectedService()?.id,
+      barberoId: this.selectedBarbero()?.id,
+      fechaHora,
+      notas: this.reservaForm.get('notas')?.value || '',
+      duracionMinutos: this.selectedService()?.duracion
+    };
+
+    this.reservaService.createReserva(data).subscribe({
+      next: (resp: any) => {
+        if (resp?.success) {
+          this.toastr.success('Reserva creada correctamente');
+        }
+      },
+      error: (err: any) => {
+        const msg = err?.error?.message || err?.message || 'Error de conexión';
+        this.toastr.error(msg, 'Error');
+      }
+    });
   }
 
   trackByServicioId(_: number, s: any) { return s.id; }

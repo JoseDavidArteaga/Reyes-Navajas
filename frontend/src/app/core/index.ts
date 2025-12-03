@@ -16,6 +16,7 @@ export * from './guards/guest.guard';
 
 // Interceptors
 export * from './interceptors/auth.interceptor';
+export * from './interceptors/error.interceptor';
 
 // Interfaces
 export * from './interfaces';

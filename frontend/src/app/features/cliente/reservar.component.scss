@@ -1,3 +1,6 @@
+/* =====================================
+   PASOS DEL FORMULARIO
+===================================== */
 .step-container {
   @apply mb-8 p-6 bg-gray-800 rounded-lg border border-gray-700;
 }
@@ -14,22 +17,87 @@
   @apply bg-barberia-gold text-gray-900;
 }
 
-.service-card, .barbero-card {
-  @apply bg-gray-800 border border-gray-700 rounded-lg hover:border-barberia-gold/50 transition-all cursor-pointer;
+/* =====================================
+   SERVICE CARD
+===================================== */
+.service-card {
+  @apply bg-gray-800 border border-gray-700 rounded-lg 
+         hover:border-barberia-gold/50 transition-all cursor-pointer;
 }
 
-.service-card.selected, .barbero-card.selected {
+.service-card.selected {
   @apply border-barberia-gold bg-barberia-gold/10;
 }
 
+/* =====================================
+   BARBERO CARD
+===================================== */
+.barbero-card {
+  @apply bg-gradient-to-br from-gray-800 to-gray-900 border-2 border-gray-700 rounded-xl 
+         cursor-pointer transition-all duration-300 transform relative overflow-hidden 
+         hover:scale-105 hover:border-barberia-gold/70 hover:shadow-lg hover:shadow-barberia-gold/20;
+
+  &::before {
+    content: '';
+    @apply absolute top-0 left-0 right-0 h-1 bg-gradient-to-r 
+           from-barberia-gold/0 via-barberia-gold/50 to-barberia-gold/0 opacity-0 transition-opacity duration-300;
+  }
+
+  &:hover::before { @apply opacity-100; }
+}
+
+.barbero-card.selected {
+  @apply border-barberia-gold bg-gradient-to-br from-barberia-gold/30 to-barberia-gold/10 
+         shadow-xl shadow-barberia-gold/40 scale-105;
+
+  &::before { @apply opacity-100; }
+
+  .barbero-name { @apply text-barberia-gold font-bold; }
+}
+
+.barbero-name {
+  @apply text-lg font-bold text-gray-100 mb-2;
+}
+
+/* =====================================
+   HORAS
+===================================== */
 .time-button {
-  @apply p-2 text-sm bg-gray-800 border border-gray-700 rounded hover:border-barberia-gold/50 transition-all;
+  @apply p-2 text-sm bg-gray-800 border border-gray-700 rounded 
+         hover:border-barberia-gold/50 transition-all;
 }
 
 .time-button.selected {
   @apply bg-barberia-gold text-gray-900 border-barberia-gold;
 }
 
-.time-button:disabled {
-  @apply opacity-50 cursor-not-allowed;
+.time-button.unavailable {
+  @apply bg-gray-800 text-gray-500 border-gray-700 cursor-not-allowed opacity-60;
+}
+
+.time-button:disabled { @apply opacity-50 cursor-not-allowed; }
+
+/* =====================================
+   CUSTOM TOAST (Opcional local)
+===================================== */
+:global {
+  .custom-toast-success {
+    background: linear-gradient(135deg, #1f2937 0%, #111827 100%) !important;
+    border: 2px solid #fcd34d !important;
+    border-radius: 12px !important;
+    box-shadow: 0 20px 60px rgba(252, 211, 77, 0.3) !important;
+    padding: 20px 24px !important;
+    min-width: 450px !important;
+    animation: slideInDown 0.5s ease-out !important;
+  }
+}
+@keyframes slideInDown {
+  from {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
