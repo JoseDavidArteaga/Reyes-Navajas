@@ -130,19 +130,33 @@ export class GestionServiciosComponent implements OnInit {
 
   onFileSelected(event: any): void {
     const file = event.target.files[0];
-    if (file && file.type.startsWith('image/')) {
-      this.selectedFile = file;
+    if (file) {
+      // Validar tamaño de archivo (2MB = 2 * 1024 * 1024 bytes)
+      const maxSize = 2 * 1024 * 1024;
+      if (file.size > maxSize) {
+        alert('El archivo es demasiado grande. El tamaño máximo permitido es 2MB.');
+        // Limpiar el input
+        event.target.value = '';
+        return;
+      }
       
-      // Crear preview de la imagen
-      const reader = new FileReader();
-      reader.onload = (e: any) => {
-        this.imagePreview = e.target.result;
-      };
-      reader.readAsDataURL(file);
-    } else {
-      // Resetear si no es una imagen válida
-      this.selectedFile = null;
-      this.imagePreview = null;
+      // Validar tipo de archivo
+      if (file.type.startsWith('image/')) {
+        this.selectedFile = file;
+        
+        // Crear preview de la imagen
+        const reader = new FileReader();
+        reader.onload = (e: any) => {
+          this.imagePreview = e.target.result;
+        };
+        reader.readAsDataURL(file);
+      } else {
+        alert('Por favor selecciona un archivo de imagen válido.');
+        // Resetear si no es una imagen válida
+        this.selectedFile = null;
+        this.imagePreview = null;
+        event.target.value = '';
+      }
     }
   }
 

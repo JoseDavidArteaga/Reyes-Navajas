@@ -120,4 +120,29 @@ public class CatalogoController {
                 .header(HttpHeaders.CONTENT_TYPE, contentType)
                 .body(recurso);
     }
+
+    // -------------------------------------------------------------
+    // 7. OBTENER IMAGEN POR DEFECTO DESDE RESOURCES
+    // -------------------------------------------------------------
+    @GetMapping("/imagenes-default/{nombre}")
+    public ResponseEntity<Resource> obtenerImagenPorDefecto(@PathVariable String nombre) throws Exception {
+        try {
+            Resource recurso = new org.springframework.core.io.ClassPathResource("imagenes-default/" + nombre);
+            
+            if (!recurso.exists()) {
+                return ResponseEntity.notFound().build();
+            }
+
+            String contentType = Files.probeContentType(recurso.getFile().toPath());
+            if (contentType == null) {
+                contentType = "application/octet-stream";
+            }
+
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_TYPE, contentType)
+                    .body(recurso);
+        } catch (Exception e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
 }

@@ -55,7 +55,7 @@ public class CatalogoService {
                 servicio.setImagenUrl(baseUrl + "/catalogo/imagenes/" + nombreArchivo);
             } else {
                 // Asignar imagen por defecto si no se proporciona
-                servicio.setImagenUrl(baseUrl + "/catalogo/imagenes/default-service.jpg");
+                servicio.setImagenUrl(baseUrl + "/catalogo/imagenes-default/default-service.jpg");
             }
         } catch (IOException e) {
             throw new RuntimeException("Error al guardar la imagen", e);
