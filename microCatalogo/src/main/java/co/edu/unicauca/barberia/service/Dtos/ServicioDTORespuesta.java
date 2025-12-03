@@ -9,4 +9,5 @@ public class ServicioDTORespuesta {
     private Integer duracion;
     private Double precio;
     private String imagenUrl;
+    private Boolean estado; // Agregar campo estado
 }

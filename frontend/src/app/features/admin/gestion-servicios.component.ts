@@ -116,7 +116,14 @@ export class GestionServiciosComponent implements OnInit {
 
   toggleEstado(servicio: any): void {
     const nuevoEstado = !servicio.activo;
-    this.servicioService.updateServicio(servicio.id, { activo: nuevoEstado }).subscribe();
+    this.servicioService.toggleEstadoServicio(servicio.id, nuevoEstado).subscribe({
+      next: (response) => {
+        console.log('Estado del servicio actualizado');
+      },
+      error: (error) => {
+        console.error('Error al cambiar estado:', error);
+      }
+    });
   }
 
   isFieldInvalid(fieldName: string): boolean {

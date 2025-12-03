@@ -166,6 +166,18 @@ public class CatalogoService {
         catalogoRepository.delete(servicio);
     }
 
+    // CAMBIAR ESTADO DEL SERVICIO (ACTIVAR/DESACTIVAR)
+    public ServicioDTORespuesta cambiarEstadoServicio(Long id, Boolean nuevoEstado) {
+        Servicio servicio = catalogoRepository.findById(id)
+                .orElseThrow(() -> new RecursoNoEncontradoException(
+                        "Servicio no encontrado con id: " + id));
+        
+        servicio.setEstado(nuevoEstado);
+        Servicio actualizado = catalogoRepository.save(servicio);
+        
+        return modelMapper.map(actualizado, ServicioDTORespuesta.class);
+    }
+
     private String extraerNombreArchivo(String urlImagen) {
         int index = urlImagen.lastIndexOf("/");
         return (index != -1) ? urlImagen.substring(index + 1) : urlImagen;

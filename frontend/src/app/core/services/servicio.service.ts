@@ -82,7 +82,7 @@ export class ServicioService {
           descripcion: s.descripcion,
           duracion: s.duracion,
           precio: s.precio,
-          activo: s.activo !== false,
+          activo: s.estado !== false, // Mapear 'estado' del backend a 'activo' del frontend
           categoria: s.categoria,
           imagen: s.imagenUrl
         }));
@@ -234,6 +234,24 @@ export class ServicioService {
         console.error('Error updating servicio:', error);
         this.isLoadingSignal.set(false);
         return of({ success: false, error: 'Error al actualizar servicio', data: null as any } as ApiResponse<Servicio>);
+      })
+    ) as any;
+  }
+
+  // Método para cambiar estado del servicio
+  toggleEstadoServicio(id: string, nuevoEstado: boolean): Observable<ApiResponse<Servicio>> {
+    this.isLoadingSignal.set(true);
+    
+    return this.http.patch<any>(`${this.API_URL}/${id}/estado?estado=${nuevoEstado}`, {}).pipe(
+      tap(response => {
+        // Recargar servicios después de cambiar estado
+        this.getAllServicios().subscribe();
+        this.isLoadingSignal.set(false);
+      }),
+      catchError(error => {
+        console.error('Error changing service state:', error);
+        this.isLoadingSignal.set(false);
+        return of({ success: false, error: 'Error al cambiar estado del servicio', data: null as any } as ApiResponse<Servicio>);
       })
     ) as any;
   }

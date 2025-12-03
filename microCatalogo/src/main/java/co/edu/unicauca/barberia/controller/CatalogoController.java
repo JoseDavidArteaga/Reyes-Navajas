@@ -18,7 +18,6 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/catalogo")
-// @CrossOrigin(origins = "http://localhost:4200") // si lo necesitas para Angular
 @RequiredArgsConstructor
 public class CatalogoController {
 
@@ -102,6 +101,18 @@ public class CatalogoController {
         catalogoService.eliminarServicio(id);
         // 204 No Content
         return ResponseEntity.noContent().build();
+    }
+
+    // -------------------------------------------------------------
+    // 6. CAMBIAR ESTADO DEL SERVICIO (ACTIVAR/DESACTIVAR)
+    // -------------------------------------------------------------
+    @PatchMapping("/servicios/{id}/estado")
+    public ResponseEntity<ServicioDTORespuesta> cambiarEstadoServicio(
+            @PathVariable Long id,
+            @RequestParam("estado") Boolean nuevoEstado) {
+        
+        ServicioDTORespuesta actualizado = catalogoService.cambiarEstadoServicio(id, nuevoEstado);
+        return ResponseEntity.ok(actualizado);
     }
 
     // -------------------------------------------------------------
