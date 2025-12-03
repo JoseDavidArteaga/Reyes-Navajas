@@ -25,9 +25,9 @@ export class LoginComponent {
     private toastr: ToastrService
   ) {
     this.loginForm = this.fb.group({
-      telefono: ['', [
+      username: ['', [
         Validators.required,
-        Validators.pattern(/^3\d{9}$/) // Formato colombiano: 3XXXXXXXXX
+        Validators.minLength(3)
       ]],
       password: ['', [
         Validators.required,
@@ -45,35 +45,35 @@ export class LoginComponent {
       
       this.authService.login(credentials).subscribe({
         next: (response) => {
-          if (response.success) {
-            this.toastr.success('¡Bienvenido!', 'Login exitoso');
-            
-            // Redirigir según el rol
-            const userRole = response.data.usuario.rol;
-            let redirectUrl = this.returnUrl;
-            
-            if (this.returnUrl === '/') {
-              switch (userRole) {
-                case 'ADMIN':
-                  redirectUrl = '/admin/gestion-barberos';
-                  break;
-                case 'BARBERO':
-                  redirectUrl = '/barbero/agenda-diaria';
-                  break;
-                case 'CLIENTE':
-                  redirectUrl = '/cliente/reservar';
-                  break;
-                default:
-                  redirectUrl = '/';
-              }
+          // Keycloak retorna directamente { access_token, refresh_token, expires_in }
+          // El servicio ya procesó la respuesta en handleTokenResponse()
+          this.toastr.success('¡Bienvenido!', 'Login exitoso');
+          
+          // Redirigir según el rol
+          const userRole = this.authService.userRole();
+          let redirectUrl = this.returnUrl;
+          
+          if (this.returnUrl === '/') {
+            switch (userRole) {
+              case 'ADMIN':
+                redirectUrl = '/admin/gestion-barberos';
+                break;
+              case 'BARBERO':
+                redirectUrl = '/barbero/agenda-diaria';
+                break;
+              case 'CLIENTE':
+                redirectUrl = '/cliente/reservar';
+                break;
+              default:
+                redirectUrl = '/';
             }
-            
-            this.router.navigate([redirectUrl]);
           }
+          
+          this.router.navigate([redirectUrl]);
         },
         error: (error) => {
           console.error('Error en login:', error);
-          this.toastr.error('Credenciales incorrectas', 'Error de autenticación');
+          this.toastr.error('Credenciales incorrectas o usuario no encontrado', 'Error de autenticación');
         }
       });
     } else {

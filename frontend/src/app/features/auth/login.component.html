@@ -18,27 +18,27 @@
     <!-- Formulario -->
     <div class="card">
       <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="space-y-6">
-        <!-- Campo Teléfono -->
+        <!-- Campo Username -->
         <div class="form-group">
-          <label for="telefono" class="form-label">
-            Número de Celular
+          <label for="username" class="form-label">
+            Nombre de Usuario
           </label>
           <input
-            id="telefono"
-            name="telefono"
-            type="tel"
-            formControlName="telefono"
+            id="username"
+            name="username"
+            type="text"
+            formControlName="username"
             class="form-input"
-            placeholder="Ej: 3001234567"
-            [class.border-red-500]="isFieldInvalid('telefono')">
+            placeholder="Tu nombre de usuario"
+            [class.border-red-500]="isFieldInvalid('username')">
           
-          <div class="form-error" *ngIf="isFieldInvalid('telefono')">
-            <span *ngIf="loginForm.get('telefono')?.errors?.['required']; else telefonoPatternError">
-              El número de celular es requerido
+          <div class="form-error" *ngIf="isFieldInvalid('username')">
+            <span *ngIf="loginForm.get('username')?.errors?.['required']; else usernameMinError">
+              El nombre de usuario es requerido
             </span>
-            <ng-template #telefonoPatternError>
-              <span *ngIf="loginForm.get('telefono')?.errors?.['pattern']">
-                Ingresa un número válido (10 dígitos)
+            <ng-template #usernameMinError>
+              <span *ngIf="loginForm.get('username')?.errors?.['minlength']">
+                El nombre de usuario debe tener al menos 3 caracteres
               </span>
             </ng-template>
           </div>
@@ -98,26 +98,19 @@
         </div>
       </form>
 
-      <!-- Cuentas de prueba -->
+      <!-- Cuentas de prueba (desde Keycloak) -->
       <div class="mt-6 pt-6 border-t border-gray-700">
-        <p class="text-xs text-gray-500 mb-3">Cuentas de prueba:</p>
+        <p class="text-xs text-gray-500 mb-3">Cuentas de prueba en Keycloak:</p>
         <div class="space-y-2 text-xs text-gray-400">
           <div class="flex justify-between">
-            <span>Admin:</span>
-            <code class="bg-gray-700 px-2 py-1 rounded">3001234567</code>
-          </div>
-          <div class="flex justify-between">
-            <span>Barbero:</span>
-            <code class="bg-gray-700 px-2 py-1 rounded">3002345678</code>
-          </div>
-          <div class="flex justify-between">
-            <span>Cliente:</span>
-            <code class="bg-gray-700 px-2 py-1 rounded">3004567890</code>
+            <span>Username:</span>
+            <code class="bg-gray-700 px-2 py-1 rounded">Pancrasio</code>
           </div>
           <div class="text-center mt-2">
-            <span>Contraseña para todos: </span>
-            <code class="bg-gray-700 px-2 py-1 rounded">123456</code>
+            <span>Contraseña: </span>
+            <code class="bg-gray-700 px-2 py-1 rounded">1234567</code>
           </div>
+          <p class="text-xs text-gray-500 mt-3">O crea tu propia cuenta en Keycloak con los roles: administrador, barbero, cliente</p>
         </div>
       </div>
     </div>

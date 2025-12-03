@@ -15,7 +15,7 @@ export interface Usuario {
 }
 
 export interface LoginRequest {
-  telefono: string;
+  username: string;
   password: string;
 }
 
