@@ -53,6 +53,17 @@ spring:
             - Path=/usuarios/**
           filters:
             - StripPrefix=0
+
+        # ----------------------------------
+        #  Endpoints de Barberos (via Usuarios)
+        # ----------------------------------
+        - id: barberos-service
+          uri: http://localhost:8085
+          predicates:
+            - Path=/barberos/**
+          filters:
+             - RewritePath=/barberos/?(?<segment>.*), /usuarios/barberos/${segment}
+
         # ----------------------------------
         #  Microservicio de Autenticación
         # ----------------------------------

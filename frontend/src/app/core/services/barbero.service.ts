@@ -8,7 +8,7 @@ import { Barbero, CreateBarberoRequest, UpdateBarberoRequest, ApiResponse, Pagin
   providedIn: 'root'
 })
 export class BarberoService {
-  private readonly API_URL = 'http://localhost:8080/api/barberos';
+  private readonly API_URL = 'http://localhost:8089/usuarios/barberos';
   private barberosSignal = signal<Barbero[]>([]);
   private isLoadingSignal = signal<boolean>(false);
 
@@ -62,32 +62,19 @@ export class BarberoService {
   getAllBarberos(): Observable<ApiResponse<Barbero[]>> {
     this.isLoadingSignal.set(true);
     
-    // Mock response
-    const mockResponse: ApiResponse<Barbero[]> = {
-      success: true,
-      data: this.mockBarberos
-    };
-
-    return of(mockResponse).pipe(
-      tap(response => {
-        if (response.success) {
-          this.barberosSignal.set(response.data);
-        }
-        this.isLoadingSignal.set(false);
-      })
-    );
-
-    // Implementación real:
-    /*
     return this.http.get<ApiResponse<Barbero[]>>(this.API_URL).pipe(
       tap(response => {
         if (response.success) {
           this.barberosSignal.set(response.data);
         }
         this.isLoadingSignal.set(false);
+      }),
+      catchError(error => {
+        console.error('Error obteniendo barberos:', error);
+        this.isLoadingSignal.set(false);
+        return of({ success: false, data: [] } as ApiResponse<Barbero[]>);
       })
     );
-    */
   }
 
   getBarberoById(id: string): Observable<ApiResponse<Barbero>> {
@@ -107,69 +94,41 @@ export class BarberoService {
   createBarbero(barbero: CreateBarberoRequest): Observable<ApiResponse<Barbero>> {
     this.isLoadingSignal.set(true);
     
-    const newBarbero: Barbero = {
-      id: Date.now().toString(),
-      ...barbero,
-      estado: EstadoBarbero.ACTIVO,
-      calificacionPromedio: 0,
-      totalServicios: 0
+    const requestBody = {
+      nombre: barbero.nombre,
+      telefono: barbero.telefono,
+      contrasenia: barbero.contrasenia, // Contraseña ingresada por el usuario
+      rol: 'barbero',
+      estado: true
     };
 
-    this.mockBarberos.push(newBarbero);
-    
-    const mockResponse: ApiResponse<Barbero> = {
-      success: true,
-      data: newBarbero
-    };
-
-    return of(mockResponse).pipe(
-      tap(response => {
-        if (response.success) {
-          this.barberosSignal.set([...this.mockBarberos]);
-        }
-        this.isLoadingSignal.set(false);
-      })
-    );
-
-    // Implementación real:
-    /*
-    return this.http.post<ApiResponse<Barbero>>(this.API_URL, barbero).pipe(
+    return this.http.post<ApiResponse<Barbero>>(this.API_URL, requestBody).pipe(
       tap(response => {
         if (response.success) {
           const currentBarberos = this.barberosSignal();
           this.barberosSignal.set([...currentBarberos, response.data]);
         }
         this.isLoadingSignal.set(false);
+      }),
+      catchError(error => {
+        console.error('Error creando barbero:', error);
+        this.isLoadingSignal.set(false);
+        throw error;
       })
     );
-    */
   }
 
   updateBarbero(id: string, barbero: UpdateBarberoRequest): Observable<ApiResponse<Barbero>> {
     this.isLoadingSignal.set(true);
     
-    const index = this.mockBarberos.findIndex(b => b.id === id);
-    if (index !== -1) {
-      this.mockBarberos[index] = { ...this.mockBarberos[index], ...barbero };
-    }
-
-    const mockResponse: ApiResponse<Barbero> = {
-      success: index !== -1,
-      data: this.mockBarberos[index]
+    const requestBody = {
+      nombre: barbero.nombre,
+      telefono: barbero.telefono,
+      contrasenia: (barbero as any).contrasenia, // Si se envía contraseña, actualizar
+      estado: barbero.estado !== undefined ? (barbero.estado === EstadoBarbero.ACTIVO) : undefined
     };
 
-    return of(mockResponse).pipe(
-      tap(response => {
-        if (response.success) {
-          this.barberosSignal.set([...this.mockBarberos]);
-        }
-        this.isLoadingSignal.set(false);
-      })
-    );
-
-    // Implementación real:
-    /*
-    return this.http.put<ApiResponse<Barbero>>(`${this.API_URL}/${id}`, barbero).pipe(
+    return this.http.put<ApiResponse<Barbero>>(`${this.API_URL}/${id}`, requestBody).pipe(
       tap(response => {
         if (response.success) {
           const currentBarberos = this.barberosSignal();
@@ -181,30 +140,31 @@ export class BarberoService {
           }
         }
         this.isLoadingSignal.set(false);
+      }),
+      catchError(error => {
+        console.error('Error actualizando barbero:', error);
+        this.isLoadingSignal.set(false);
+        throw error;
       })
     );
-    */
   }
 
   deleteBarbero(id: string): Observable<ApiResponse<void>> {
     this.isLoadingSignal.set(true);
     
-    const index = this.mockBarberos.findIndex(b => b.id === id);
-    if (index !== -1) {
-      this.mockBarberos.splice(index, 1);
-    }
-
-    const mockResponse: ApiResponse<void> = {
-      success: index !== -1,
-      data: undefined as any
-    };
-
-    return of(mockResponse).pipe(
+    return this.http.delete<ApiResponse<void>>(`${this.API_URL}/${id}`).pipe(
       tap(response => {
         if (response.success) {
-          this.barberosSignal.set([...this.mockBarberos]);
+          const currentBarberos = this.barberosSignal();
+          const filtered = currentBarberos.filter(b => b.id !== id);
+          this.barberosSignal.set(filtered);
         }
         this.isLoadingSignal.set(false);
+      }),
+      catchError(error => {
+        console.error('Error eliminando barbero:', error);
+        this.isLoadingSignal.set(false);
+        throw error;
       })
     );
   }
