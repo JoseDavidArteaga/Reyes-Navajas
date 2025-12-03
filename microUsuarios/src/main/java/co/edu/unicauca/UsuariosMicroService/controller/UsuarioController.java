@@ -100,12 +100,38 @@ public class UsuarioController {
     // -------------------------------------------
     // 2. CREAR USUARIO (solo ADMIN)
     // -------------------------------------------
-    @PostMapping("")
-    public ResponseEntity<User> createUser(@RequestBody UsuarioRequest newUser) {
+    @PostMapping("/barberos")
+    public ResponseEntity<?> createUser(@RequestBody UsuarioRequest newUser) {
         log.info("Creando usuario: {} con rol: {}", newUser.getNombre(), newUser.getRol());
         // Aquí se respeta el rol enviado: administrador, barbero, cliente
-        User saved = service.save(newUser);
-        return ResponseEntity.status(HttpStatus.CREATED).body(saved);
+        try {
+            User saved = service.save(newUser);
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("data", saved);
+            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        } catch (UserAlreadyExistsException e) {
+            log.warn("Intento de crear usuario duplicado: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(Map.of(
+                    "success", false,
+                    "message", "El nombre de usuario '" + newUser.getNombre() + "' ya está registrado"
+                ));
+        } catch (DataIntegrityViolationException e) {
+            log.warn("Violación de integridad al crear usuario: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(Map.of(
+                    "success", false,
+                    "message", "El nombre de usuario ya está registrado"
+                ));
+        } catch (Exception e) {
+            log.error("Error inesperado al crear usuario: ", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of(
+                    "success", false,
+                    "message", "Error interno del servidor al crear el usuario"
+                ));
+        }
     }
 
 
@@ -124,7 +150,7 @@ public class UsuarioController {
     // -------------------------------------------
     // 4. ACTUALIZAR USUARIO (solo ADMIN)
     // -------------------------------------------
-    @PutMapping("/{username}")
+    @PutMapping("/barberos/username/{username}")
     public ResponseEntity<User> updateUser(
             @PathVariable String username,
             @RequestBody UsuarioRequest updatedData) {
@@ -139,6 +165,31 @@ public class UsuarioController {
             return ResponseEntity.ok(updated);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    @PutMapping("/barberos/{id}")
+    public ResponseEntity<?> updateBarberoById(
+            @PathVariable Long id,
+            @RequestBody UsuarioRequest updatedData) {
+
+        log.info("Actualizando barbero con ID: {}", id);
+        Optional<User> opt = service.findById(id);
+        if (opt.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("success", false, "message", "Barbero no encontrado"));
+        }
+
+        try {
+            User updated = service.updateUsuario(opt.get(), updatedData);
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("data", updated);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("Error actualizando barbero id {}: ", id, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("success", false, "message", "Error interno al actualizar barbero"));
         }
     }
 
@@ -170,6 +221,60 @@ public class UsuarioController {
         dto.setRol(u.getRol());
 
         return ResponseEntity.ok(dto);
+    }
+
+    // -------------------------------------------
+    // 6. ENDPOINTS PARA BARBEROS
+    // -------------------------------------------
+    @GetMapping("/barberos")
+    public ResponseEntity<?> getAllBarberos() throws Exception {
+        log.info("Obteniendo lista de barberos");
+        List<User> barberos = service.findBarberos();
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("data", barberos);
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/barberos/{id}")
+    public ResponseEntity<?> getBarberoById(@PathVariable String id) {
+        log.info("Obteniendo barbero con ID: {}", id);
+        Optional<User> opt = service.findBarberoById(Long.valueOf(id));
+        if (opt.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("success", false, "message", "Barbero no encontrado"));
+        }
+
+        User barbero = opt.get();
+        UsuarioResumenDTO dto = new UsuarioResumenDTO();
+        dto.setId(String.valueOf(barbero.getId()));
+        dto.setNombre(barbero.getNombre());
+        dto.setTelefono(barbero.getTelefono());
+        dto.setRol(barbero.getRol());
+
+        return ResponseEntity.ok(dto);
+    }
+
+    @DeleteMapping("/barberos/{id}")
+    public ResponseEntity<?> deleteBarberoById(@PathVariable Long id) {
+        log.info("Eliminando barbero con ID: {}", id);
+        Optional<User> opt = service.findById(id);
+        if (opt.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("success", false, "message", "Barbero no encontrado"));
+        }
+
+        try {
+            service.deleteBarberoById(id);
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "Barbero eliminado exitosamente");
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("Error eliminando barbero id {}: ", id, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("success", false, "message", "Error interno al eliminar barbero"));
+        }
     }
 }
 

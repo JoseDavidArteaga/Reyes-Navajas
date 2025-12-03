@@ -29,8 +29,19 @@ public class SecurityConfig {
     public SecurityWebFilterChain filterChain(ServerHttpSecurity http) {
 
         http.authorizeExchange(exchanges -> exchanges
-                // Allow CORS preflight requests
+
+                // OPTIONS preflight
                 .pathMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+
+                // ------------------------------------
+                //          RUTAS BARBEROS (PÚBLICAS)
+                // ------------------------------------
+                .pathMatchers(HttpMethod.GET, "/barberos").permitAll()
+                .pathMatchers(HttpMethod.GET, "/barberos/**").permitAll()
+
+                // IMPORTANTE: rutas reales después del rewrite!
+                .pathMatchers(HttpMethod.GET, "/usuarios/barberos").permitAll()
+                .pathMatchers(HttpMethod.GET, "/usuarios/barberos/**").permitAll()
 
                 // ------------------------------------
                 //          ENDPOINTS PÚBLICOS
@@ -41,29 +52,27 @@ public class SecurityConfig {
                 .pathMatchers("/catalogo/imagenes/**").permitAll()
 
                 // ------------------------------------
-                //     LLAMADAS INTERNAS (sin JWT)
+                //     ENDPOINTS DE BARBEROS (ADMIN)
                 // ------------------------------------
-                // Solo accesibles con header X-Internal-Call: true
+                .pathMatchers(HttpMethod.POST, "/barberos").hasRole("ADMINISTRADOR")
+                .pathMatchers(HttpMethod.PUT, "/barberos/**").hasRole("ADMINISTRADOR")
+                .pathMatchers(HttpMethod.DELETE, "/barberos/**").hasRole("ADMINISTRADOR")
+
+                // ------------------------------------
+                //     LLAMADAS INTERNAS /usuarios/**
+                // ------------------------------------
                 .pathMatchers("/usuarios/**")
                 .access((authentication, context) -> {
                     String internalCall = context.getExchange()
-                            .getRequest()
-                            .getHeaders()
-                            .getFirst("X-Internal-Call");
+                            .getRequest().getHeaders().getFirst("X-Internal-Call");
 
                     String serviceName = context.getExchange()
-                            .getRequest()
-                            .getHeaders()
-                            .getFirst("X-Service-Name");
+                            .getRequest().getHeaders().getFirst("X-Service-Name");
 
-                    // Si es llamada interna, permitir
                     if ("true".equals(internalCall) && serviceName != null) {
-                        return Mono.just(
-                                new org.springframework.security.authorization.AuthorizationDecision(true)
-                        );
+                        return Mono.just(new org.springframework.security.authorization.AuthorizationDecision(true));
                     }
 
-                    // Si no, debe tener JWT y rol ADMINISTRADOR
                     return authentication
                             .map(auth -> new org.springframework.security.authorization.AuthorizationDecision(
                                     auth.isAuthenticated() &&
@@ -81,7 +90,6 @@ public class SecurityConfig {
                 .pathMatchers("/catalogo/**").hasAnyRole("ADMINISTRADOR", "BARBERO", "CLIENTE")
                 .pathMatchers("/turnos/**").hasAnyRole("ADMINISTRADOR", "BARBERO", "CLIENTE")
 
-                // Cualquier otro endpoint requiere autenticación
                 .anyExchange().authenticated()
         );
 
@@ -101,18 +109,16 @@ public class SecurityConfig {
         return new ReactiveJwtAuthenticationConverterAdapter(converter);
     }
 
-        @Bean
-        public CorsWebFilter corsWebFilter() {
-                CorsConfiguration config = new CorsConfiguration();
-                // Permitir todos los orígenes (CORS abierto)
-                config.setAllowedOriginPatterns(Arrays.asList("*"));
-                config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-                config.setAllowedHeaders(Arrays.asList("*"));
-                // Permitir credenciales si es necesario (cookies/authorization)
-                config.setAllowCredentials(true);
+    @Bean
+    public CorsWebFilter corsWebFilter() {
+        CorsConfiguration config = new CorsConfiguration();
+        config.setAllowedOriginPatterns(Arrays.asList("*"));
+        config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        config.setAllowedHeaders(Arrays.asList("*"));
+        config.setAllowCredentials(true);
 
-                UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-                source.registerCorsConfiguration("/**", config);
-                return new CorsWebFilter(source);
-        }
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", config);
+        return new CorsWebFilter(source);
+    }
 }

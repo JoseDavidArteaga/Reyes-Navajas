@@ -137,6 +137,33 @@ public class UsuarioService {
         return repository.findAll();
     }
     
+    @Transactional
+    public List<User> findBarberos() {
+        log.debug("Obteniendo lista de barberos");
+        return repository.findByRol("barbero");
+    }
+    
+    @Transactional
+    public Optional<User> findBarberoById(Long id) {
+        log.debug("Buscando barbero por ID: {}", id);
+        Optional<User> usuario = repository.findById(id);
+        if (usuario.isPresent() && "barbero".equals(usuario.get().getRol())) {
+            return usuario;
+        }
+        return Optional.empty();
+    }
+
+    @Transactional
+    public void deleteBarberoById(Long id) {
+        log.info("Eliminando barbero con ID: {}", id);
+        Optional<User> opt = repository.findById(id);
+        if (opt.isPresent()) {
+            User user = opt.get();
+            repository.deleteById(id);
+            log.info("Barbero eliminado exitosamente: {} (ID: {})", user.getNombre(), id);
+        }
+    }
+    
     private String generateEmail(User user) {
         return user.getTelefono() != null && user.getTelefono().contains("@") ? 
                user.getTelefono() : 

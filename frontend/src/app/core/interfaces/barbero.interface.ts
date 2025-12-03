@@ -27,9 +27,8 @@ export interface Barbero {
 
 export interface CreateBarberoRequest {
   nombre: string;
-  telefono?: string;
-  especialidades: string[];
-  horario: HorarioTrabajo[];
+  telefono: string;
+  contrasenia: string;
 }
 
 export interface UpdateBarberoRequest extends Partial<CreateBarberoRequest> {
