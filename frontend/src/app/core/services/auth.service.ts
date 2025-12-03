@@ -9,9 +9,13 @@ import { Usuario, UserRole, LoginRequest, LoginResponse, RegisterRequest, ApiRes
   providedIn: 'root'
 })
 export class AuthService {
-  private readonly API_URL = 'http://localhost:8080/api/auth';
   private readonly TOKEN_KEY = 'auth_token';
   private readonly USER_KEY = 'current_user';
+  private readonly KEYCLOAK_TOKEN_URL = 'http://localhost:8080/realms/MicroservicesBarber/protocol/openid-connect/token';
+  private readonly KEYCLOAK_CLIENT_ID = 'barber-service';
+  private readonly ACCESS_TOKEN_KEY = 'access_token';
+  private readonly REFRESH_TOKEN_KEY = 'refresh_token';
+  private readonly TOKEN_EXPIRES_AT_KEY = 'access_token_expires_at';
 
   // Signals para manejo de estado
   private currentUserSignal = signal<Usuario | null>(this.getUserFromStorage());
@@ -31,112 +35,141 @@ export class AuthService {
     private router: Router
   ) {}
 
-  login(credentials: LoginRequest): Observable<ApiResponse<LoginResponse>> {
-    this.isLoadingSignal.set(true);
-    
-    // Mock response para desarrollo
-    const mockResponse: ApiResponse<LoginResponse> = {
-      success: true,
-      data: {
-        token: 'mock_jwt_token_' + Date.now(),
-        usuario: {
-          id: '1',
-          nombre: credentials.telefono === '3001234567' ? 'Admin Usuario' : 'Cliente Demo',
-          telefono: credentials.telefono,
-          rol: credentials.telefono === '3001234567' ? UserRole.ADMIN : 
-               credentials.telefono === '3002345678' ? UserRole.BARBERO : UserRole.CLIENTE
-        },
-        expiresIn: 3600
-      }
-    };
-
-    return of(mockResponse).pipe(
-      tap(response => {
-        if (response.success) {
-          this.setSession(response.data);
-        }
-        this.isLoadingSignal.set(false);
-      }),
-      catchError(error => {
-        this.isLoadingSignal.set(false);
-        throw error;
-      })
-    );
-
-    // Implementación real cuando la API esté lista:
-    /*
-    return this.http.post<ApiResponse<LoginResponse>>(`${this.API_URL}/login`, credentials).pipe(
-      tap(response => {
-        if (response.success) {
-          this.setSession(response.data);
-        }
-        this.isLoadingSignal.set(false);
-      }),
-      catchError(error => {
-        this.isLoadingSignal.set(false);
-        throw error;
-      })
-    );
-    */
+  login(credentials: LoginRequest): Observable<any> {
+    return this.loginWithKeycloak(credentials.username, credentials.password);
   }
 
-  register(userData: RegisterRequest): Observable<ApiResponse<Usuario>> {
+  loginWithKeycloak(username: string, password: string): Observable<any> {
     this.isLoadingSignal.set(true);
     
-    // Mock response para desarrollo
-    const mockResponse: ApiResponse<Usuario> = {
-      success: true,
-      data: {
-        id: Date.now().toString(),
-        nombre: userData.nombre,
-        telefono: userData.telefono,
-        rol: UserRole.CLIENTE
-      }
+    const params = new URLSearchParams();
+    params.append('grant_type', 'password');
+    params.append('client_id', this.KEYCLOAK_CLIENT_ID);
+    params.append('username', username);
+    params.append('password', password);
+
+    return this.http.post<any>(
+      this.KEYCLOAK_TOKEN_URL,
+      params.toString(),
+      { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
+    ).pipe(
+      tap(response => {
+        this.handleTokenResponse(response);
+        this.isLoadingSignal.set(false);
+      }),
+      catchError(error => {
+        this.isLoadingSignal.set(false);
+        console.error('Error en login con Keycloak:', error);
+        throw error;
+      })
+    );
+  }
+
+  refreshToken(): Observable<any> {
+    const refreshToken = sessionStorage.getItem(this.REFRESH_TOKEN_KEY);
+    if (!refreshToken) return of(null);
+
+    const params = new URLSearchParams();
+    params.append('grant_type', 'refresh_token');
+    params.append('client_id', this.KEYCLOAK_CLIENT_ID);
+    params.append('refresh_token', refreshToken);
+
+    return this.http.post<any>(
+      this.KEYCLOAK_TOKEN_URL,
+      params.toString(),
+      { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
+    ).pipe(
+      tap(response => this.handleTokenResponse(response)),
+      catchError(error => {
+        console.error('Error refrescando token:', error);
+        this.logout();
+        throw error;
+      })
+    );
+  }
+
+  private handleTokenResponse(response: any): void {
+    const accessToken = response.access_token;
+    const refreshToken = response.refresh_token;
+    const expiresIn = response.expires_in;
+
+    sessionStorage.setItem(this.ACCESS_TOKEN_KEY, accessToken);
+    if (refreshToken) sessionStorage.setItem(this.REFRESH_TOKEN_KEY, refreshToken);
+
+    const expiresAt = Date.now() + (expiresIn * 1000);
+    sessionStorage.setItem(this.TOKEN_EXPIRES_AT_KEY, expiresAt.toString());
+
+    try {
+      const payload = JSON.parse(atob(accessToken.split('.')[1]));
+      const username = payload.preferred_username || payload.username || payload.sub;
+      const roles = payload.realm_access?.roles || [];
+      
+      const usuario: Usuario = {
+        id: payload.sub || '0',
+        nombre: username,
+        telefono: payload.phone_number || username, // Usa phone_number si está disponible, sino username
+        rol: this.mapRoles(roles)
+      };
+
+      this.currentUserSignal.set(usuario);
+      localStorage.setItem(this.USER_KEY, JSON.stringify(usuario));
+    } catch (err) {
+      console.error('Error parseando JWT:', err);
+    }
+  }
+
+  private mapRoles(roles: string[]): UserRole {
+    if (roles.includes('administrador') || roles.includes('admin')) return UserRole.ADMIN;
+    else if (roles.includes('barbero')) return UserRole.BARBERO;
+    return UserRole.CLIENTE;
+  }
+
+  getAccessToken(): string | null {
+    return sessionStorage.getItem(this.ACCESS_TOKEN_KEY);
+  }
+
+  isTokenExpiringSoon(secondsBefore: number = 60): boolean {
+    const expiresAt = sessionStorage.getItem(this.TOKEN_EXPIRES_AT_KEY);
+    if (!expiresAt) return true;
+    return Date.now() > (parseInt(expiresAt) - (secondsBefore * 1000));
+  }
+
+  register(userData: RegisterRequest): Observable<any> {
+    this.isLoadingSignal.set(true);
+    
+    // Transformar datos al formato esperado por el backend
+    const requestData = {
+      nombre: userData.nombre,
+      telefono: userData.telefono,
+      contrasenia: userData.password  // 🔑 IMPORTANTE: password → contrasenia
     };
 
-    return of(mockResponse).pipe(
-      tap(() => this.isLoadingSignal.set(false)),
-      catchError(error => {
+    // Enviar a API Gateway (puerto 8089)
+    return this.http.post<any>(
+      'http://localhost:8089/usuarios/registro', 
+      requestData
+    ).pipe(
+      tap((response) => {
         this.isLoadingSignal.set(false);
+        // Nota: El endpoint de registro NO retorna token JWT
+        // Solo retorna los datos del usuario creado
+      }),
+      catchError((error) => {
+        this.isLoadingSignal.set(false);
+        console.error('Error en registro:', error);
         throw error;
       })
     );
-
-    // Implementación real:
-    /*
-    return this.http.post<ApiResponse<Usuario>>(`${this.API_URL}/register`, userData).pipe(
-      tap(() => this.isLoadingSignal.set(false)),
-      catchError(error => {
-        this.isLoadingSignal.set(false);
-        throw error;
-      })
-    );
-    */
   }
 
   logout(): void {
+    sessionStorage.removeItem(this.ACCESS_TOKEN_KEY);
+    sessionStorage.removeItem(this.REFRESH_TOKEN_KEY);
+    sessionStorage.removeItem(this.TOKEN_EXPIRES_AT_KEY);
     localStorage.removeItem(this.TOKEN_KEY);
     localStorage.removeItem(this.USER_KEY);
     this.currentUserSignal.set(null);
     this.router.navigate(['/login']);
-  }
-
-  refreshToken(): Observable<ApiResponse<LoginResponse>> {
-    // Mock implementation
-    return of({
-      success: true,
-      data: {
-        token: 'refreshed_mock_token_' + Date.now(),
-        usuario: this.currentUserSignal()!,
-        expiresIn: 3600
-      }
-    }).pipe(
-      tap(response => {
-        if (response.success) {
-          this.setToken(response.data.token);
-        }
-      })
-    );
   }
 
   getToken(): string | null {
@@ -166,11 +199,9 @@ export class AuthService {
   }
 
   isTokenExpired(): boolean {
-    const token = this.getToken();
-    if (!token) return true;
-    
-    // Mock implementation - en producción verificar el JWT
-    return false;
+    const expiresAt = sessionStorage.getItem(this.TOKEN_EXPIRES_AT_KEY);
+    if (!expiresAt) return true;
+    return Date.now() > parseInt(expiresAt);
   }
 
   hasRole(role: UserRole): boolean {

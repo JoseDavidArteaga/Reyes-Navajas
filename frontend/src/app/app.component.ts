@@ -3,6 +3,7 @@ import { RouterOutlet, Router, NavigationEnd } from '@angular/router';
 import { NavbarComponent, FooterComponent } from './shared';
 import { filter } from 'rxjs/operators';
 import { Subscription } from 'rxjs';
+import { TokenAutoRefreshService } from './core/services/token-auto-refresh.service';
 
 @Component({
   selector: 'app-root',
@@ -26,7 +27,10 @@ export class AppComponent implements OnInit, OnDestroy {
   
   private routerSubscription: Subscription | null = null;
 
-  constructor(private router: Router) {}
+  constructor(
+    private router: Router,
+    private tokenAutoRefreshService: TokenAutoRefreshService
+  ) {}
 
   ngOnInit(): void {
     // Configurar scroll to top global en cambios de ruta

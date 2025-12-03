@@ -256,18 +256,37 @@ export class RegisterComponent {
       
       this.authService.register(userData).subscribe({
         next: (response) => {
-          if (response.success) {
+          // El backend retorna el usuario creado directamente
+          if (response && response.id) {
             this.toastr.success('¡Cuenta creada exitosamente!', 'Registro completado');
             this.toastr.info('Ahora puedes iniciar sesión', 'Siguiente paso');
-            this.router.navigate(['/login']);
+            
+            // Limpiar formulario
+            this.registerForm.reset();
+            
+            // Navegar a login después de 1 segundo
+            setTimeout(() => {
+              this.router.navigate(['/login']);
+            }, 1000);
           }
         },
         error: (error) => {
           console.error('Error en registro:', error);
-          if (error.status === 409) {
-            this.toastr.error('Este número de celular ya está registrado', 'Error de registro');
+          
+          // Manejo de errores HTTP específicos
+          if (error.status === 409 || error.status === 400) {
+            const errorMsg = error?.error?.message || 
+                            'Este usuario ya existe';
+            this.toastr.error(errorMsg, 'Usuario duplicado');
+          } else if (error.status === 0) {
+            this.toastr.error('No se puede conectar al servidor', 'Error de conexión');
+          } else if (error.status >= 500) {
+            this.toastr.error('Error en el servidor. Intenta más tarde.', 'Error del servidor');
           } else {
-            this.toastr.error('Error al crear la cuenta. Intenta nuevamente.', 'Error de registro');
+            this.toastr.error(
+              error?.error?.message || 'Error al crear la cuenta', 
+              'Error de registro'
+            );
           }
         }
       });
