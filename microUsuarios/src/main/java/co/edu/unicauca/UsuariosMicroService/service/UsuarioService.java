@@ -164,6 +164,31 @@ public class UsuarioService {
         }
     }
     
+    @Transactional
+    public User cambiarEstadoBarbero(Long id, Boolean nuevoEstado) throws Exception {
+        log.info("Cambiando estado del barbero con ID: {} a: {}", id, nuevoEstado);
+        
+        Optional<User> opt = findBarberoById(id);
+        if (opt.isEmpty()) {
+            throw new RuntimeException("Barbero no encontrado con ID: " + id);
+        }
+        
+        User barbero = opt.get();
+        
+        // Crear UsuarioRequest para reutilizar el método updateUsuario existente
+        UsuarioRequest updateRequest = new UsuarioRequest();
+        updateRequest.setNombre(barbero.getNombre());
+        updateRequest.setContrasenia(barbero.getContrasenia());
+        updateRequest.setTelefono(barbero.getTelefono());
+        updateRequest.setRol(barbero.getRol());
+        updateRequest.setEstado(nuevoEstado); // Solo cambiar el estado
+        
+        User updatedBarbero = updateUsuario(barbero, updateRequest);
+        log.info("Estado del barbero {} actualizado a: {}", updatedBarbero.getNombre(), nuevoEstado);
+        
+        return updatedBarbero;
+    }
+    
     private String generateEmail(User user) {
         return user.getTelefono() != null && user.getTelefono().contains("@") ? 
                user.getTelefono() : 

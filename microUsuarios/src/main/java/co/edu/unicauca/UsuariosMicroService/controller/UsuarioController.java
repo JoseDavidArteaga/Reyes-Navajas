@@ -18,6 +18,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+
 
 @RestController
 @RequestMapping("/usuarios")
@@ -239,6 +242,7 @@ public class UsuarioController {
         dto.setNombre(u.getNombre());
         dto.setTelefono(u.getTelefono());
         dto.setRol(u.getRol());
+        dto.setEstado(u.isEstado()); // Agregar estado
 
         return ResponseEntity.ok(dto);
     }
@@ -271,6 +275,7 @@ public class UsuarioController {
         dto.setNombre(barbero.getNombre());
         dto.setTelefono(barbero.getTelefono());
         dto.setRol(barbero.getRol());
+        dto.setEstado(barbero.isEstado()); // Agregar estado
 
         return ResponseEntity.ok(dto);
     }
@@ -294,6 +299,42 @@ public class UsuarioController {
             log.error("Error eliminando barbero id {}: ", id, e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("success", false, "message", "Error interno al eliminar barbero"));
+        }
+    }
+
+    // -------------------------------------------
+    // 7. CAMBIAR ESTADO DEL BARBERO (ACTIVAR/DESACTIVAR)
+    // -------------------------------------------
+    @PutMapping("/barberos/{id}/estado")
+    public ResponseEntity<?> cambiarEstadoBarbero(
+            @PathVariable Long id,
+            @RequestParam("estado") Boolean nuevoEstado) {
+        log.info("Cambiando estado del barbero con ID: {} a: {}", id, nuevoEstado);
+        
+        Optional<User> opt = service.findBarberoById(id);
+        if (opt.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("success", false, "message", "Barbero no encontrado"));
+        }
+
+        try {
+            User barberoActualizado = service.cambiarEstadoBarbero(id, nuevoEstado);
+            UsuarioResumenDTO dto = new UsuarioResumenDTO();
+            dto.setId(String.valueOf(barberoActualizado.getId()));
+            dto.setNombre(barberoActualizado.getNombre());
+            dto.setTelefono(barberoActualizado.getTelefono());
+            dto.setRol(barberoActualizado.getRol());
+            dto.setEstado(barberoActualizado.isEstado()); // Agregar estado al DTO
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("data", dto);
+            response.put("message", "Estado del barbero actualizado exitosamente");
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("Error cambiando estado del barbero id {}: ", id, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("success", false, "message", "Error interno al cambiar estado del barbero"));
         }
     }
 }

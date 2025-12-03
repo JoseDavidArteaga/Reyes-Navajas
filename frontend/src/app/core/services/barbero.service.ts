@@ -64,14 +64,28 @@ export class BarberoService {
     
     return this.http.get<ApiResponse<Barbero[]>>(this.API_URL).pipe(
       tap(response => {
-        if (response.success) {
-          this.barberosSignal.set(response.data);
+        if (response.success && response.data) {
+          // Mapear la respuesta del backend al formato esperado
+          const mappedBarberos = response.data.map((b: any) => ({
+            id: b.id?.toString() || '',
+            nombre: b.nombre,
+            telefono: b.telefono,
+            especialidades: b.especialidades || [],
+            estado: b.estado ? EstadoBarbero.ACTIVO : EstadoBarbero.INACTIVO, // Mapear boolean a enum
+            horario: b.horario || [],
+            calificacionPromedio: b.calificacionPromedio || 0,
+            totalServicios: b.totalServicios || 0
+          }));
+          
+          this.barberosSignal.set(mappedBarberos);
         }
         this.isLoadingSignal.set(false);
       }),
       catchError(error => {
-        console.error('Error obteniendo barberos:', error);
+        console.error('Error loading barberos:', error);
         this.isLoadingSignal.set(false);
+        // En caso de error, usar datos mock
+        this.barberosSignal.set(this.mockBarberos);
         return of({ success: false, data: [] } as ApiResponse<Barbero[]>);
       })
     );
@@ -180,6 +194,24 @@ export class BarberoService {
 
   cambiarEstadoBarbero(id: string, estado: EstadoBarbero): Observable<ApiResponse<Barbero>> {
     return this.updateBarbero(id, { estado });
+  }
+
+  // Método para cambiar estado usando la API real del backend
+  toggleEstadoBarbero(id: string, nuevoEstado: boolean): Observable<any> {
+    this.isLoadingSignal.set(true);
+    
+    return this.http.put<any>(`${this.API_URL}/${id}/estado?estado=${nuevoEstado}`, {}).pipe(
+      tap(response => {
+        // Recargar barberos después de cambiar estado
+        this.getAllBarberos().subscribe();
+        this.isLoadingSignal.set(false);
+      }),
+      catchError(error => {
+        console.error('Error changing barbero state:', error);
+        this.isLoadingSignal.set(false);
+        throw error;
+      })
+    );
   }
 
   private loadBarberos(): void {

@@ -241,6 +241,22 @@ export class GestionBarberosComponent implements OnInit {
     }
   }
 
+  toggleEstado(barbero: any): void {
+    const nuevoEstado = barbero.estado !== EstadoBarbero.ACTIVO; // Cambiar a boolean para el backend
+    this.barberoService.toggleEstadoBarbero(barbero.id, nuevoEstado).subscribe({
+      next: (response) => {
+        console.log('Estado del barbero actualizado');
+        this.successMessage.set(`Barbero ${nuevoEstado ? 'activado' : 'desactivado'} exitosamente`);
+        setTimeout(() => this.successMessage.set(null), 3000);
+      },
+      error: (error) => {
+        console.error('Error al cambiar estado:', error);
+        this.errorMessage.set('Error al cambiar el estado del barbero');
+        setTimeout(() => this.errorMessage.set(null), 3000);
+      }
+    });
+  }
+
   // Métodos trackBy para optimizar el rendimiento
   trackByBarberoId(index: number, barbero: any): any {
     return barbero.id;

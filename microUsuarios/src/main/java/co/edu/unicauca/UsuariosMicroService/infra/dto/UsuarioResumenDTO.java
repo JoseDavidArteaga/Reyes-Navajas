@@ -8,4 +8,5 @@ public class UsuarioResumenDTO {
     private String nombre;
     private String telefono;
     private String rol;
+    private boolean estado; // Agregar campo estado
 }
