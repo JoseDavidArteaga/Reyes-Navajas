@@ -34,7 +34,7 @@ import { ToastrService } from 'ngx-toastr';
             <!-- Campo Nombre -->
             <div class="form-group">
               <label for="nombre" class="form-label">
-                Nombre Completo
+                Nombre de usuario
               </label>
               <input
                 id="nombre"
@@ -42,7 +42,7 @@ import { ToastrService } from 'ngx-toastr';
                 type="text"
                 formControlName="nombre"
                 class="form-input"
-                placeholder="Tu nombre completo"
+                placeholder="Nombre de usuario"
                 [class.border-red-500]="isFieldInvalid('nombre')">
               
               @if (isFieldInvalid('nombre')) {

@@ -50,8 +50,16 @@ public class UsuarioService {
         
         log.info("Iniciando guardado de usuario: {}", usuarioRequest.getNombre());
         
+        // Validar que el nombre no exista
         if (repository.findByNombre(usuarioRequest.getNombre()).isPresent()) {
             String msg = "El nombre de usuario '" + usuarioRequest.getNombre() + "' ya está en uso";
+            log.warn(msg);
+            throw new co.edu.unicauca.UsuariosMicroService.infra.exception.UserAlreadyExistsException(msg);
+        }
+        
+        // Validar que el teléfono no exista
+        if (repository.findByTelefono(usuarioRequest.getTelefono()).isPresent()) {
+            String msg = "El número de teléfono '" + usuarioRequest.getTelefono() + "' ya está registrado";
             log.warn(msg);
             throw new co.edu.unicauca.UsuariosMicroService.infra.exception.UserAlreadyExistsException(msg);
         }
@@ -102,14 +110,27 @@ public class UsuarioService {
     @Transactional
     public User updateUsuario(User existingusuario, UsuarioRequest usuariomodificado) throws Exception {
 
-        if (usuariomodificado.getNombre() != null) {
+        // Validar que el nuevo nombre no esté ya en uso (si se está cambiando)
+        if (usuariomodificado.getNombre() != null && !usuariomodificado.getNombre().equals(existingusuario.getNombre())) {
+            if (repository.findByNombre(usuariomodificado.getNombre()).isPresent()) {
+                throw new co.edu.unicauca.UsuariosMicroService.infra.exception.UserAlreadyExistsException(
+                    "El nombre de usuario '" + usuariomodificado.getNombre() + "' ya está en uso");
+            }
             existingusuario.setNombre(usuariomodificado.getNombre());
         }
+        
+        // Validar que el nuevo teléfono no esté ya en uso (si se está cambiando)
+        if (usuariomodificado.getTelefono() != null && !usuariomodificado.getTelefono().equals(existingusuario.getTelefono())) {
+            Optional<User> usuarioExistenteTelefono = repository.findByTelefono(usuariomodificado.getTelefono());
+            if (usuarioExistenteTelefono.isPresent() && !usuarioExistenteTelefono.get().getId().equals(existingusuario.getId())) {
+                throw new co.edu.unicauca.UsuariosMicroService.infra.exception.UserAlreadyExistsException(
+                    "El número de teléfono '" + usuariomodificado.getTelefono() + "' ya está registrado");
+            }
+            existingusuario.setTelefono(usuariomodificado.getTelefono());
+        }
+        
         if (usuariomodificado.getContrasenia() != null) {
             existingusuario.setContrasenia(usuariomodificado.getContrasenia());
-        }
-        if (usuariomodificado.getTelefono() != null) {
-            existingusuario.setTelefono(usuariomodificado.getTelefono());
         }
         if (usuariomodificado.isEstado() != existingusuario.isEstado()) {
             existingusuario.setEstado(usuariomodificado.isEstado());

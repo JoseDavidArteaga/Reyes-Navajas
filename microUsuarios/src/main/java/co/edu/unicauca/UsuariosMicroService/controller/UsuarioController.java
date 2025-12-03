@@ -48,6 +48,14 @@ public class UsuarioController {
                     .body(Map.of("success", false, "message", "El teléfono es requerido"));
             }
             
+            // Validar formato del teléfono (solo números, 10 dígitos)
+            String telefono = newUser.getTelefono().trim().replaceAll("\\D", "");
+            if (telefono.length() != 10) {
+                return ResponseEntity.badRequest()
+                    .body(Map.of("success", false, "message", "El teléfono debe tener exactamente 10 dígitos"));
+            }
+            newUser.setTelefono(telefono);
+            
             if (newUser.getContrasenia() == null || newUser.getContrasenia().length() < 6) {
                 return ResponseEntity.badRequest()
                     .body(Map.of("success", false, "message", "La contraseña debe tener mínimo 6 caracteres"));
@@ -76,11 +84,11 @@ public class UsuarioController {
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
             
         } catch (UserAlreadyExistsException e) {
-            log.warn("Intento de registro con usuario duplicado: {}", e.getMessage());
+            log.warn("Intento de registro con datos duplicados: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(Map.of(
                     "success", false, 
-                    "message", "El nombre de usuario '" + newUser.getNombre() + "' ya está registrado"
+                    "message", e.getMessage() // Usar el mensaje específico del servicio
                 ));
         } catch (DataIntegrityViolationException e) {
             log.warn("Violación de integridad al registrar usuario: {}", e.getMessage());
@@ -106,19 +114,44 @@ public class UsuarioController {
     @PostMapping("/barberos")
     public ResponseEntity<?> createUser(@RequestBody UsuarioRequest newUser) {
         log.info("Creando usuario: {} con rol: {}", newUser.getNombre(), newUser.getRol());
-        // Aquí se respeta el rol enviado: administrador, barbero, cliente
+        
         try {
+            // Validaciones básicas
+            if (newUser.getNombre() == null || newUser.getNombre().trim().isEmpty()) {
+                return ResponseEntity.badRequest()
+                    .body(Map.of("success", false, "message", "El nombre es requerido"));
+            }
+            
+            if (newUser.getTelefono() == null || newUser.getTelefono().trim().isEmpty()) {
+                return ResponseEntity.badRequest()
+                    .body(Map.of("success", false, "message", "El teléfono es requerido"));
+            }
+            
+            // Validar formato del teléfono (solo números, 10 dígitos)
+            String telefono = newUser.getTelefono().trim().replaceAll("\\D", "");
+            if (telefono.length() != 10) {
+                return ResponseEntity.badRequest()
+                    .body(Map.of("success", false, "message", "El teléfono debe tener exactamente 10 dígitos"));
+            }
+            newUser.setTelefono(telefono);
+            
+            if (newUser.getContrasenia() == null || newUser.getContrasenia().length() < 6) {
+                return ResponseEntity.badRequest()
+                    .body(Map.of("success", false, "message", "La contraseña debe tener mínimo 6 caracteres"));
+            }
+            
+            // Aquí se respeta el rol enviado: administrador, barbero, cliente
             User saved = service.save(newUser);
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
             response.put("data", saved);
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
         } catch (UserAlreadyExistsException e) {
-            log.warn("Intento de crear usuario duplicado: {}", e.getMessage());
+            log.warn("Intento de crear usuario con datos duplicados: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(Map.of(
                     "success", false,
-                    "message", "El nombre de usuario '" + newUser.getNombre() + "' ya está registrado"
+                    "message", e.getMessage() // Usar el mensaje específico del servicio
                 ));
         } catch (DataIntegrityViolationException e) {
             log.warn("Violación de integridad al crear usuario: {}", e.getMessage());

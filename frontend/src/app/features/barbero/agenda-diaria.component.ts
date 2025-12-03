@@ -189,24 +189,6 @@ import { LoadingSpinnerComponent } from '../../shared';
                 </div>
               }
             </div>
-
-            <!-- Acciones rápidas -->
-            <div class="card">
-              <h3 class="text-lg font-semibold text-gray-100 mb-4">
-                Acciones Rápidas
-              </h3>
-              <div class="space-y-3">
-                <button class="w-full btn-primary">
-                  Ver Cola Virtual
-                </button>
-                <button class="w-full btn-secondary">
-                  Marcar Descanso
-                </button>
-                <button class="w-full btn-secondary">
-                  Ver Métricas
-                </button>
-              </div>
-            </div>
           </div>
         </div>
       }
