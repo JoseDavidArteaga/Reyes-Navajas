@@ -1,10 +1,9 @@
 import { Component, inject, signal, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
-import { ServicioService, BarberoService, ReservaService } from '../../core';
+import { ServicioService, BarberoService, ReservaService, AuthService } from '../../core';
 import { LoadingSpinnerComponent } from '../../shared';
-// Nota: Aquí podrías necesitar importar la interfaz Barbero si usas selectedBarbero/barberosDisponibles
-// con un tipado estricto en lugar de <any>.
+import { ToastrService } from 'ngx-toastr';
 
 @Component({
   selector: 'app-reservar',
@@ -15,10 +14,13 @@ import { LoadingSpinnerComponent } from '../../shared';
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ReservarComponent {
+
   private readonly servicioService = inject(ServicioService);
   private readonly barberoService = inject(BarberoService); // Se mantiene inyectado por si es útil en el futuro
   private readonly reservaService = inject(ReservaService);
+  private readonly authService = inject(AuthService);
   private readonly fb = inject(FormBuilder);
+  private readonly toastr = inject(ToastrService);
 
   servicios = this.servicioService.servicios;
   // ELIMINADA: barberos = this.barberoService.barberos; 
@@ -31,6 +33,8 @@ export class ReservarComponent {
 
   barberosDisponibles = signal<any[]>([]); // Idealmente tipado como Barbero[]
   horasDisponibles = signal<string[]>([]);
+  availableHours = signal<Set<string>>(new Set());
+  hasAvailabilityData = signal<boolean>(false);
 
   minDate: string;
   maxDate: string;
@@ -76,25 +80,24 @@ export class ReservarComponent {
     this.selectedService.set(servicio);
     this.reservaForm.patchValue({ servicio: servicio.id });
 
-    // Consultar **TODOS** los barberos (como se solicitó)
-    // Se asume que el método getBarberosByServicio() en ReservaService ahora devuelve TODOS los barberos.
-    this.reservaService.getBarberosByServicio().subscribe({
-      next: (response: any) => {
-        if (response.success && response.data) {
-          this.barberosDisponibles.set(response.data);
-        } else {
-          this.barberosDisponibles.set([]);
-        }
+    this.barberoService.getAllBarberos().subscribe({
+      next: (resp: any) => {
+        const data = resp?.data ?? resp;
+        this.barberosDisponibles.set(data);
       },
-      error: () => {
-        this.barberosDisponibles.set([]);
+      error: (err: any) => {
+        console.warn('Error obteniendo barberos:', err);
+        this.barberosDisponibles.set(this.barberos());
       }
     });
-    console.log('Barberos disponibles cargados:', this.barberosDisponibles());
-    // Avanzar al paso 2 si estamos en el paso 1
+
     if (this.currentStep() === 1) this.nextStep();
   }
 
+  selectBarbero(barbero: any): void {
+    this.selectedBarbero.set(barbero);
+    this.reservaForm.patchValue({ barbero: barbero.id });
+    this.loadDisponibilidadBarbero();
 
 
   selectTime(hora: string): void {
@@ -102,13 +105,54 @@ export class ReservarComponent {
     this.reservaForm.patchValue({ hora });
   }
 
+  onFechaChange(): void {
+    if (this.selectedBarbero()) {
+      this.loadDisponibilidadBarbero();
+    }
+  }
+
+  private loadDisponibilidadBarbero(): void {
+  if (!this.selectedBarbero()) return;
+
+  const fechaStr =
+    this.reservaForm.get('fecha')?.value ||
+    new Date().toISOString().split('T')[0];
+
+  this.reservaService
+    .getDisponibilidadBarbero(this.selectedBarbero().id, new Date(fechaStr), 1)
+    .subscribe({
+      next: (resp) => {
+        const horas = this.reservaService.mapHorasDisponiblesPorFecha(
+          resp.data ?? resp,
+          fechaStr
+        );
+
+        if (horas && horas.length > 0) {
+          this.availableHours.set(new Set(horas));
+          this.hasAvailabilityData.set(true);
+        } else {
+          this.availableHours.set(new Set());
+          this.hasAvailabilityData.set(false);
+        }
+
+        this.generateHorasDisponibles();
+      },
+      error: (err) => {
+        console.warn('Error obteniendo disponibilidad del barbero:', err);
+        this.availableHours.set(new Set());
+        this.hasAvailabilityData.set(false);
+        this.generateHorasDisponibles();
+      }
+    });
+}
+
+
+
   nextStep(): void {
     if (this.isStepValid(this.currentStep())) {
       this.currentStep.set(this.currentStep() + 1);
-
-      // Si avanzamos al paso 3, cargamos las horas
-      if (this.currentStep() === 3 && this.selectedBarbero() && this.reservaForm.get('fecha')?.value) {
-        this.cargarHorasDisponibles();
+      if (this.currentStep() === 3) {
+        this.generateHorasDisponibles();
       }
     }
   }
@@ -177,7 +221,9 @@ console.log("Horarios:", response.data.horarios);
 }
 
   isTimeAvailable(hora: string): boolean {
-    return this.horasDisponibles().includes(hora);
+    const set = this.availableHours();
+    if (!this.hasAvailabilityData()) return true;
+    return set.has(hora);
   }
 
   // --- Lógica de Finalización ---
@@ -203,29 +249,33 @@ selectBarbero(barbero: any) {
   }
 }
   onSubmit(): void {
-    if (this.reservaForm.valid) {
-      // Crear el string fechaHora en formato ISO 8601 (YYYY-MM-DDTHH:MM)
-      const fechaHoraISO = `${this.reservaForm.get('fecha')?.value}T${this.reservaForm.get('hora')?.value}:00`;
+    if (!this.reservaForm.valid) return;
 
-      const data = {
-        servicioId: this.selectedService()?.id,
-        barberoId: this.selectedBarbero()?.id,
-        fechaHora: fechaHoraISO, 
-        notas: this.reservaForm.get('notas')?.value || ''
-      };
+    const fecha = this.reservaForm.get('fecha')?.value;
+    const hora = this.reservaForm.get('hora')?.value;
 
-      // Llamar al método de creación en el servicio (asumiendo que acepta CreateReservaRequest)
-      this.reservaService.createReserva(data).subscribe({
-        next: resp => {
-          console.log('Reserva creada', resp);
-          // TODO: Redirigir al usuario o mostrar un mensaje de éxito.
-        },
-        error: err => {
-          console.error('Error al crear la reserva', err);
-          // TODO: Mostrar un mensaje de error al usuario.
+    const fechaHora = `${fecha}T${hora}:00`;
+
+    const data = {
+      clienteId: this.authService.currentUser()?.id,
+      servicioId: this.selectedService()?.id,
+      barberoId: this.selectedBarbero()?.id,
+      fechaHora,
+      notas: this.reservaForm.get('notas')?.value || '',
+      duracionMinutos: this.selectedService()?.duracion
+    };
+
+    this.reservaService.createReserva(data).subscribe({
+      next: (resp: any) => {
+        if (resp?.success) {
+          this.toastr.success('Reserva creada correctamente');
         }
-      });
-    }
+      },
+      error: (err: any) => {
+        const msg = err?.error?.message || err?.message || 'Error de conexión';
+        this.toastr.error(msg, 'Error');
+      }
+    });
   }
 
   // --- Funciones Auxiliares ---
