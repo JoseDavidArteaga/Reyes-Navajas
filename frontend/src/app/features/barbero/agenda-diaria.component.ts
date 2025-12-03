@@ -1,6 +1,7 @@
-import { Component, OnInit, ChangeDetectionStrategy } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core'; 
 import { CommonModule } from '@angular/common';
-import { ReservaService, AuthService } from '../../core';
+import { ReservaService, AuthService, Reserva, EstadoReserva} from '../../core';
+import {UserService} from '../../core/services/user.service';
 import { LoadingSpinnerComponent } from '../../shared';
 
 @Component({
@@ -18,7 +19,7 @@ import { LoadingSpinnerComponent } from '../../shared';
         </p>
       </div>
 
-      @if (reservaService.isLoading()) {
+      @if (isLoading) {
         <app-loading-spinner message="Cargando agenda..."></app-loading-spinner>
       } @else {
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -32,16 +33,16 @@ import { LoadingSpinnerComponent } from '../../shared';
               <div class="space-y-3">
                 @for (reserva of citasDelDia; track reserva.id) {
                   <div class="bg-gray-900 rounded-lg p-4 border-l-4" 
-                       [class]="getBorderClass(reserva.estado)">
+                        [class]="getBorderClass(reserva.estado)">
                     <div class="flex justify-between items-start">
-                      <div>
+                      <div class="flex-1">
                         <h3 class="text-lg font-medium text-gray-100">
-                          {{ reserva.cliente?.nombre }}
+                          Cliente #{{ reserva.clienteId }}
                         </h3>
-                        <p class="text-gray-400">{{ reserva.servicio?.nombre }}</p>
+                        <p class="text-gray-400">Servicio #{{ reserva.servicioId }}</p>
                         <p class="text-sm text-gray-500">
                           {{ reserva.fechaHora | date:'shortTime' }} - 
-                          {{ reserva.servicio?.duracion }} min
+                          {{ reserva.duracionMinutos }} min
                         </p>
                         @if (reserva.notas) {
                           <p class="text-xs text-gray-400 mt-1">
@@ -53,22 +54,73 @@ import { LoadingSpinnerComponent } from '../../shared';
                         <span [class]="getBadgeClass(reserva.estado)">
                           {{ getEstadoText(reserva.estado) }}
                         </span>
-                        <div class="mt-2 space-x-2">
-                          @if (reserva.estado === 'CONFIRMADA') {
-                            <button 
-                              (click)="iniciarServicio(reserva.id)"
-                              class="btn-primary text-xs px-3 py-1">
-                              Iniciar
-                            </button>
-                          }
-                          @if (reserva.estado === 'EN_PROGRESO') {
-                            <button 
-                              (click)="finalizarServicio(reserva.id)"
-                              class="bg-green-600 hover:bg-green-700 text-white text-xs px-3 py-1 rounded">
-                              Finalizar
-                            </button>
-                          }
-                        </div>
+                        
+                        <!-- Botones según el estado -->
+                        <div class="mt-2 flex flex-wrap gap-2 justify-end">
+
+  <!-- 1. ESTADO: PENDIENTE -->
+  @if (reserva.estado === 'PENDIENTE') {
+    <button 
+      (click)="confirmarReserva(reserva.id)"
+      class="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-1 rounded">
+      Confirmar
+    </button>
+
+    <button 
+      (click)="iniciarServicio(reserva.id)"
+      class="bg-green-600 hover:bg-green-700 text-white text-xs px-3 py-1 rounded">
+      ▶Iniciar
+    </button>
+
+    <button 
+      (click)="cancelarReserva(reserva.id)"
+      class="bg-red-600 hover:bg-red-700 text-white text-xs px-3 py-1 rounded">
+      Cancelar
+    </button>
+  }
+
+  <!-- 2. ESTADO: CONFIRMADO -->
+  @if (reserva.estado === 'CONFIRMADO') {
+    <button 
+      (click)="iniciarServicio(reserva.id)"
+      class="bg-green-600 hover:bg-green-700 text-white text-xs px-3 py-1 rounded">
+      Iniciar
+    </button>
+
+    <button 
+      (click)="cancelarReserva(reserva.id)"
+      class="bg-red-600 hover:bg-red-700 text-white text-xs px-3 py-1 rounded">
+      Cancelar
+    </button>
+
+    <button 
+      (click)="marcarNoAsistio(reserva.id)"
+      class="bg-orange-600 hover:bg-orange-700 text-white text-xs px-3 py-1 rounded">
+       No asistió
+    </button>
+  }
+
+  <!-- 3. ESTADO: EN_PROCESO -->
+  @if (reserva.estado === 'EN_PROCESO') {
+    <button 
+      (click)="finalizarServicio(reserva.id)"
+      class="bg-purple-600 hover:bg-purple-700 text-white text-xs px-3 py-1 rounded">
+      Finalizar
+    </button>
+  }
+
+  <!-- 4. ESTADOS QUE YA NO PERMITEN ACCIONES -->
+  @if (
+    reserva.estado === 'FINALIZADO' ||
+    reserva.estado === 'CANCELADO' ||
+    reserva.estado === 'NO_ASISTIO'
+  ) {
+    <span class="text-xs text-gray-500 italic">
+      Sin acciones
+    </span>
+  }
+</div>
+
                       </div>
                     </div>
                   </div>
@@ -105,10 +157,8 @@ import { LoadingSpinnerComponent } from '../../shared';
                   <span class="text-yellow-400 font-medium">{{ getCitasPendientes() }}</span>
                 </div>
                 <div class="flex justify-between">
-                  <span class="text-gray-400">Ingresos estimados:</span>
-                  <span class="text-barberia-gold font-medium">
-                    \${{ getIngresosEstimados() | number }}
-                  </span>
+                  <span class="text-gray-400">Canceladas:</span>
+                  <span class="text-red-400 font-medium">{{ getCitasCanceladas() }}</span>
                 </div>
               </div>
             </div>
@@ -124,13 +174,13 @@ import { LoadingSpinnerComponent } from '../../shared';
                     {{ proximaCita.fechaHora | date:'shortTime' }}
                   </div>
                   <div class="text-gray-100 font-medium">
-                    {{ proximaCita.cliente?.nombre }}
+                    Cliente #{{ proximaCita.clienteId }}
                   </div>
                   <div class="text-gray-400">
-                    {{ proximaCita.servicio?.nombre }}
+                    Servicio #{{ proximaCita.servicioId }}
                   </div>
                   <div class="text-xs text-gray-500 mt-2">
-                    {{ proximaCita.servicio?.duracion }} minutos
+                    {{ proximaCita.duracionMinutos }} minutos
                   </div>
                 </div>
               } @else {
@@ -161,17 +211,19 @@ import { LoadingSpinnerComponent } from '../../shared';
         </div>
       }
     </div>
-  `,
-  changeDetection: ChangeDetectionStrategy.OnPush
+  `
 })
 export class AgendaDiariaComponent implements OnInit {
   currentDate = new Date();
   citasDelDia: any[] = [];
-  proximaCita: any = null;
+  proximaCita: any | null = null;
+  isLoading: boolean = true;
 
   constructor(
     public reservaService: ReservaService,
-    private authService: AuthService
+    private authService: AuthService,
+    private userService: UserService,
+    private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit(): void {
@@ -179,28 +231,127 @@ export class AgendaDiariaComponent implements OnInit {
   }
 
   loadAgenda(): void {
+    this.isLoading = true;
+    this.cdr.detectChanges();
+    
     const currentUser = this.authService.currentUser();
-    if (currentUser) {
-      this.reservaService.getReservasByBarbero(currentUser.id, this.currentDate).subscribe(response => {
-        if (response.success) {
-          this.citasDelDia = response.data.sort((a, b) => 
-            new Date(a.fechaHora).getTime() - new Date(b.fechaHora).getTime()
-          );
-          this.setProximaCita();
+    console.log(`[AgendaDiariaComponent] Usuario actual:`, currentUser);
+    
+    if (currentUser && currentUser.nombre) {
+      this.userService.getUserIdByUsername(currentUser.nombre).subscribe({
+        next: (userId: string) => {
+          console.log(`[AgendaDiariaComponent] ID del usuario:`, userId);
+          this.reservaService.getReservasByBarbero(userId, this.currentDate).subscribe({
+            next: (response) => {
+              console.log('[AgendaDiariaComponent] Respuesta recibida:', response);
+              
+              // Manejar diferentes formatos de respuesta
+              let reservas: any[] = [];
+              if (Array.isArray(response)) {
+                reservas = response;
+              } else if (response?.success && response?.data) {
+                reservas = Array.isArray(response.data) ? response.data : [response.data];
+              } else if (response?.data) {
+                reservas = Array.isArray(response.data) ? response.data : [response.data];
+              }
+              
+              if (reservas.length > 0) {
+                this.citasDelDia = reservas.sort((a, b) => 
+                  new Date(a.fechaHora).getTime() - new Date(b.fechaHora).getTime()
+                );
+                this.setProximaCita();
+              } else {
+                this.citasDelDia = [];
+                this.proximaCita = null;
+              }
+              
+              this.isLoading = false;
+              this.cdr.detectChanges();
+            },
+            error: (err) => {
+              console.error('[AgendaDiariaComponent] Error al cargar reservas:', err);
+              this.isLoading = false;
+              this.cdr.detectChanges();
+            }
+          });
+        },
+        error: (err) => {
+          console.error('[AgendaDiariaComponent] Error al obtener ID de usuario:', err);
+          this.isLoading = false;
+          this.cdr.detectChanges();
         }
       });
+    } else {
+      console.warn('[AgendaDiariaComponent] No hay usuario actual o falta nombre');
+      this.isLoading = false;
+      this.cdr.detectChanges();
     }
   }
 
+  // Código activo - flujo simplificado
   iniciarServicio(reservaId: string): void {
-    this.reservaService.iniciarServicio(reservaId).subscribe(() => {
-      this.loadAgenda();
+    console.log('[AgendaDiariaComponent] Iniciando servicio:', reservaId);
+    this.reservaService.iniciarServicio(reservaId).subscribe({
+      next: () => {
+        console.log('[AgendaDiariaComponent] Servicio iniciado exitosamente');
+        this.loadAgenda();
+      },
+      error: (err) => {
+        console.error('[AgendaDiariaComponent] Error al iniciar servicio:', err);
+      }
+    });
+  }
+  
+  finalizarServicio(reservaId: string): void {
+    console.log('[AgendaDiariaComponent] Finalizando servicio:', reservaId);
+    this.reservaService.finalizarServicio(reservaId).subscribe({
+      next: () => {
+        console.log('[AgendaDiariaComponent] Servicio finalizado exitosamente');
+        this.loadAgenda();
+      },
+      error: (err) => {
+        console.error('[AgendaDiariaComponent] Error al finalizar servicio:', err);
+      }
     });
   }
 
-  finalizarServicio(reservaId: string): void {
-    this.reservaService.finalizarServicio(reservaId).subscribe(() => {
-      this.loadAgenda();
+  cancelarReserva(reservaId: string): void {
+    console.log('[AgendaDiariaComponent] Cancelando reserva:', reservaId);
+    this.reservaService.cancelarReserva(reservaId).subscribe({
+      next: () => {
+        console.log('[AgendaDiariaComponent] Reserva cancelada exitosamente');
+        this.loadAgenda();
+      },
+      error: (err) => {
+        console.error('[AgendaDiariaComponent] Error al cancelar reserva:', err);
+      }
+    });
+  }
+
+  // Código mantenido pero no usado en el flujo simplificado
+  confirmarReserva(reservaId: string): void {
+    console.log('[AgendaDiariaComponent] Confirmando reserva:', reservaId);
+    this.reservaService.confirmarReserva(reservaId).subscribe({
+      next: () => {
+        console.log('[AgendaDiariaComponent] Reserva confirmada exitosamente');
+        this.loadAgenda();
+      },
+      error: (err) => {
+        console.error('[AgendaDiariaComponent] Error al confirmar reserva:', err);
+      }
+    });
+  }
+
+  marcarNoAsistio(reservaId: string): void {
+    console.log('[AgendaDiariaComponent] Marcando como no asistió:', reservaId);
+    this.reservaService.marcarNoAsistio(reservaId).subscribe({
+      next: () => {
+        console.log('[AgendaDiariaComponent] Marcado como no asistió exitosamente');
+        this.loadAgenda();
+      },
+      error: (err) => {
+        console.error('[AgendaDiariaComponent] Error al marcar no asistió:', err);
+      }
     });
   }
 
@@ -208,8 +359,11 @@ export class AgendaDiariaComponent implements OnInit {
     switch (estado) {
       case 'CONFIRMADA': return 'border-blue-500';
       case 'EN_PROGRESO': return 'border-green-500';
-      case 'FINALIZADA': return 'border-gray-500';
-      default: return 'border-yellow-500';
+      case 'FINALIZADA': return 'border-purple-500';
+      case 'PENDIENTE': return 'border-yellow-500';
+      case 'CANCELADA': return 'border-red-500';
+      case 'NO_ASISTIO': return 'border-orange-500';
+      default: return 'border-gray-500';
     }
   }
 
@@ -218,7 +372,10 @@ export class AgendaDiariaComponent implements OnInit {
     switch (estado) {
       case 'CONFIRMADA': return baseClass + 'badge-info';
       case 'EN_PROGRESO': return baseClass + 'badge-success';
-      case 'FINALIZADA': return baseClass + 'badge-success';
+      case 'FINALIZADA': return baseClass + 'bg-purple-500/20 text-purple-400';
+      case 'PENDIENTE': return baseClass + 'badge-warning';
+      case 'CANCELADA': return baseClass + 'badge-error';
+      case 'NO_ASISTIO': return baseClass + 'bg-orange-500/20 text-orange-400';
       default: return baseClass + 'badge-warning';
     }
   }
@@ -228,6 +385,9 @@ export class AgendaDiariaComponent implements OnInit {
       case 'CONFIRMADA': return 'Confirmada';
       case 'EN_PROGRESO': return 'En Progreso';
       case 'FINALIZADA': return 'Finalizada';
+      case 'PENDIENTE': return 'Pendiente';
+      case 'CANCELADA': return 'Cancelada';
+      case 'NO_ASISTIO': return 'No Asistió';
       default: return estado;
     }
   }
@@ -237,19 +397,21 @@ export class AgendaDiariaComponent implements OnInit {
   }
 
   getCitasPendientes(): number {
-    return this.citasDelDia.filter(c => ['CONFIRMADA', 'EN_PROGRESO'].includes(c.estado)).length;
+    return this.citasDelDia.filter(c => ['EN_PROGRESO', 'PENDIENTE'].includes(c.estado)).length;
   }
 
-  getIngresosEstimados(): number {
-    return this.citasDelDia
-      .filter(c => c.estado !== 'CANCELADA')
-      .reduce((total, cita) => total + (cita.servicio?.precio || 0), 0);
+  getCitasCanceladas(): number {
+    return this.citasDelDia.filter(c => c.estado === 'CANCELADA').length;
+  }
+
+  getCitasNoAsistio(): number {
+    return this.citasDelDia.filter(c => c.estado === 'NO_ASISTIO').length;
   }
 
   private setProximaCita(): void {
     const now = new Date();
     this.proximaCita = this.citasDelDia.find(cita => 
-      new Date(cita.fechaHora) > now && ['CONFIRMADA', 'PENDIENTE'].includes(cita.estado)
-    );
+      new Date(cita.fechaHora) > now && ['PENDIENTE', 'EN_PROGRESO'].includes(cita.estado)
+    ) || null;
   }
 }

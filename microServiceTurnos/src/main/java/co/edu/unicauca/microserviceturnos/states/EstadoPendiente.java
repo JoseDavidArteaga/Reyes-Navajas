@@ -18,7 +18,7 @@ public class EstadoPendiente extends EstadoTurno{
     @Override
     public void iniciar() {
         System.out.println("No se puede iniciar un turno pendiente.");
-        throw new AccionInvalidaTurnoException("No se puede iniciar un turno que aún está pendiente de confirmación.");
+        turno.setEstadoTurno(new EstadoEnProceso(turno));
     }
 
     @Override
