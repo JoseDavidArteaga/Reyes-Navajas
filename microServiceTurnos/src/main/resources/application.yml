@@ -9,7 +9,7 @@ spring:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: jdbc:mysql://localhost:3306/turnos_db?createDatabaseIfNotExist=true&serverTimezone=UTC
     username: root
-    password: oracle
+    password: 
 
   jpa:
     hibernate:
@@ -17,14 +17,20 @@ spring:
     show-sql: true
     properties:
       hibernate:
+        hibernate.type.preferred_uuid_jdbc_type: BINARY
         dialect: org.hibernate.dialect.MySQL8Dialect
 
 # IMPORTANTE: Ahora apunta al Gateway, no directo al microservicio
 usuarios:
   service:
-    url: http://localhost:8089/usuarios # <--- ¡CORREGIDO! Apuntando al Gateway en 8089
+    url: http://localhost:8089/usuarios # <--- ï¿½CORREGIDO! Apuntando al Gateway en 8089
 
 whatsapp:
   api:
     url: https://api.whatsapp.example/send
     token: ${WHATSAPP_API_TOKEN:TU_TOKEN_AQUI}
+
+turnos:
+  tolerancia-minutos: 10
+  min-duration-minutes: 45
+  buffer-minutes: 5

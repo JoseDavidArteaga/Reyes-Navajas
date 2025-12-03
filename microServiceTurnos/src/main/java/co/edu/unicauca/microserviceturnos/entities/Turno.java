@@ -16,6 +16,7 @@ public class Turno {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
+    @Column(columnDefinition = "BINARY(16)")
     private UUID id;
 
     private String clienteId;
@@ -25,6 +26,9 @@ public class Turno {
 
     private LocalDateTime fechaHora;
     private LocalDateTime fechaCreacion;
+    
+    // Duración en minutos del turno
+    private Integer duracionMinutos;
 
 
     @Enumerated(EnumType.STRING)
@@ -74,23 +78,40 @@ public class Turno {
         if (estadoTurno instanceof EstadoNoAsistio) return EstadoTurnoEnum.NO_ASISTIO;
         throw new IllegalArgumentException("Estado desconocido: " + estadoTurno.getClass());
     }
+    private void ensureEstadoTurnoInitialized() {
+        if (this.estadoTurno == null) {
+            if (this.estado != null) {
+                this.estadoTurno = getEstadoTurnoObjeto();
+            } else {
+                // Fallback: default to PENDIENTE
+                this.estado = EstadoTurnoEnum.PENDIENTE;
+                this.estadoTurno = new EstadoPendiente(this);
+            }
+        }
+    }
+
     public void confirmar() {
+        ensureEstadoTurnoInitialized();
         estadoTurno.confirmar();
     }
 
     public void iniciar() {
+        ensureEstadoTurnoInitialized();
         estadoTurno.iniciar();
     }
 
     public void finalizar() {
+        ensureEstadoTurnoInitialized();
         estadoTurno.finalizar();
     }
 
     public void cancelar() {
+        ensureEstadoTurnoInitialized();
         estadoTurno.cancelar();
     }
 
     public void noAsistio() {
+        ensureEstadoTurnoInitialized();
         estadoTurno.marcarNoAsistio();
     }
 }

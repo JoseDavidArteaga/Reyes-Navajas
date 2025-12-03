@@ -17,6 +17,7 @@ public class TurnoRequest {
     private String estado;
     private String notas;
     private LocalDateTime fechaCreacion;
+    private Integer duracionMinutos;
 
 
     public String getClienteId() { return clienteId; }
