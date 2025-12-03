@@ -1,15 +1,15 @@
 import { Injectable, computed, signal } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { Observable, BehaviorSubject, of } from 'rxjs';
 import { map, tap, catchError } from 'rxjs/operators';
 import { Usuario, UserRole, LoginRequest, LoginResponse, RegisterRequest, ApiResponse } from '../interfaces';
+import { API_CONFIG } from '../config/api.config';
 
 @Injectable({
   providedIn: 'root'
 })
 export class AuthService {
-  private readonly API_URL = 'http://localhost:8080/api/auth';
   private readonly TOKEN_KEY = 'auth_token';
   private readonly USER_KEY = 'current_user';
 
@@ -34,23 +34,46 @@ export class AuthService {
   login(credentials: LoginRequest): Observable<ApiResponse<LoginResponse>> {
     this.isLoadingSignal.set(true);
     
-    // Mock response para desarrollo
-    const mockResponse: ApiResponse<LoginResponse> = {
-      success: true,
-      data: {
-        token: 'mock_jwt_token_' + Date.now(),
-        usuario: {
-          id: '1',
-          nombre: credentials.telefono === '3001234567' ? 'Admin Usuario' : 'Cliente Demo',
-          telefono: credentials.telefono,
-          rol: credentials.telefono === '3001234567' ? UserRole.ADMIN : 
-               credentials.telefono === '3002345678' ? UserRole.BARBERO : UserRole.CLIENTE
-        },
-        expiresIn: 3600
-      }
-    };
+    const headers = new HttpHeaders({
+      'Content-Type': 'application/x-www-form-urlencoded'
+    });
+    
+    const body = new URLSearchParams({
+      grant_type: 'password',
+      client_id: API_CONFIG.KEYCLOAK_CLIENT_ID,
+      username: credentials.telefono,
+      password: credentials.password
+    });
 
-    return of(mockResponse).pipe(
+    return this.http.post<any>(API_CONFIG.ENDPOINTS.AUTH.LOGIN, body.toString(), { headers }).pipe(
+      map(keycloakResponse => {
+        // Extraer información del token JWT para obtener roles
+        const tokenPayload = this.parseJwtToken(keycloakResponse.access_token);
+        const roles = tokenPayload.realm_access?.roles || [];
+        
+        let userRole = UserRole.CLIENTE;
+        if (roles.includes('ADMINISTRADOR')) {
+          userRole = UserRole.ADMIN;
+        } else if (roles.includes('BARBERO')) {
+          userRole = UserRole.BARBERO;
+        }
+
+        const loginResponse: LoginResponse = {
+          token: keycloakResponse.access_token,
+          usuario: {
+            id: tokenPayload.sub,
+            nombre: tokenPayload.preferred_username || credentials.telefono,
+            telefono: credentials.telefono,
+            rol: userRole
+          },
+          expiresIn: keycloakResponse.expires_in
+        };
+
+        return {
+          success: true,
+          data: loginResponse
+        } as ApiResponse<LoginResponse>;
+      }),
       tap(response => {
         if (response.success) {
           this.setSession(response.data);
@@ -59,59 +82,40 @@ export class AuthService {
       }),
       catchError(error => {
         this.isLoadingSignal.set(false);
-        throw error;
-      })
-    );
-
-    // Implementación real cuando la API esté lista:
-    /*
-    return this.http.post<ApiResponse<LoginResponse>>(`${this.API_URL}/login`, credentials).pipe(
-      tap(response => {
-        if (response.success) {
-          this.setSession(response.data);
+        console.error('Login error:', error);
+        let errorMessage = 'Error en el login';
+        
+        if (error.status === 401) {
+          errorMessage = 'Credenciales inválidas';
+        } else if (error.status === 0) {
+          errorMessage = 'Error de conexión. Verificar que Keycloak esté funcionando';
+        } else if (error.error?.error_description) {
+          errorMessage = error.error.error_description;
         }
-        this.isLoadingSignal.set(false);
-      }),
-      catchError(error => {
-        this.isLoadingSignal.set(false);
-        throw error;
+        
+        return of({
+          success: false,
+          error: errorMessage,
+          data: null as any
+        } as ApiResponse<LoginResponse>);
       })
     );
-    */
   }
 
   register(userData: RegisterRequest): Observable<ApiResponse<Usuario>> {
     this.isLoadingSignal.set(true);
     
-    // Mock response para desarrollo
-    const mockResponse: ApiResponse<Usuario> = {
-      success: true,
-      data: {
-        id: Date.now().toString(),
-        nombre: userData.nombre,
-        telefono: userData.telefono,
-        rol: UserRole.CLIENTE
-      }
-    };
-
-    return of(mockResponse).pipe(
+    return this.http.post<ApiResponse<Usuario>>(API_CONFIG.ENDPOINTS.AUTH.REGISTER, userData).pipe(
       tap(() => this.isLoadingSignal.set(false)),
       catchError(error => {
         this.isLoadingSignal.set(false);
-        throw error;
+        return of({
+          success: false,
+          error: error.error?.message || 'Error en el registro',
+          data: null as any
+        } as ApiResponse<Usuario>);
       })
     );
-
-    // Implementación real:
-    /*
-    return this.http.post<ApiResponse<Usuario>>(`${this.API_URL}/register`, userData).pipe(
-      tap(() => this.isLoadingSignal.set(false)),
-      catchError(error => {
-        this.isLoadingSignal.set(false);
-        throw error;
-      })
-    );
-    */
   }
 
   logout(): void {
@@ -180,5 +184,19 @@ export class AuthService {
   hasAnyRole(roles: UserRole[]): boolean {
     const currentRole = this.userRole();
     return currentRole ? roles.includes(currentRole) : false;
+  }
+
+  private parseJwtToken(token: string): any {
+    try {
+      const base64Url = token.split('.')[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+      }).join(''));
+      return JSON.parse(jsonPayload);
+    } catch (error) {
+      console.error('Error parsing JWT token:', error);
+      return {};
+    }
   }
 }
