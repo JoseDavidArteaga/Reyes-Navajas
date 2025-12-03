@@ -16,22 +16,22 @@ import { ToastrService } from 'ngx-toastr';
 export class ReservarComponent {
 
   private readonly servicioService = inject(ServicioService);
-  private readonly barberoService = inject(BarberoService);
+  private readonly barberoService = inject(BarberoService); // Se mantiene inyectado por si es útil en el futuro
   private readonly reservaService = inject(ReservaService);
   private readonly authService = inject(AuthService);
   private readonly fb = inject(FormBuilder);
   private readonly toastr = inject(ToastrService);
 
   servicios = this.servicioService.servicios;
-  barberos = this.barberoService.barberos;
-  isLoading = this.servicioService.isLoading;
+  // ELIMINADA: barberos = this.barberoService.barberos; 
+  isLoading = this.reservaService.isLoading; // Usamos el isLoading del servicio de reservas
 
   currentStep = signal(1);
-  selectedService = signal<any>(null);
-  selectedBarbero = signal<any>(null);
+  selectedService = signal<any>(null); // Idealmente tipado como Servicio
+  selectedBarbero = signal<any>(null); // Idealmente tipado como Barbero
   selectedTime = signal<string>('');
 
-  barberosDisponibles = signal<any[]>([]);
+  barberosDisponibles = signal<any[]>([]); // Idealmente tipado como Barbero[]
   horasDisponibles = signal<string[]>([]);
   availableHours = signal<Set<string>>(new Set());
   hasAvailabilityData = signal<boolean>(false);
@@ -43,8 +43,10 @@ export class ReservarComponent {
 
   constructor() {
     const today = new Date();
+    // Obtener la fecha mínima para el calendario (hoy)
     this.minDate = today.toISOString().split('T')[0];
 
+    // Obtener la fecha máxima para el calendario (30 días en el futuro)
     const max = new Date();
     max.setDate(today.getDate() + 30);
     this.maxDate = max.toISOString().split('T')[0];
@@ -57,9 +59,22 @@ export class ReservarComponent {
       notas: ['']
     });
 
+    // 1. Cargar servicios al iniciar
     this.servicioService.getAllServicios().subscribe();
-    this.barberoService.getAllBarberos().subscribe();
+    // ELIMINADO: this.reservaService.getBarberosByServicio().subscribe(); // Innecesario en el constructor
+
+    // 2. Escuchar cambios en la fecha para actualizar horas disponibles
+    this.reservaForm.get('fecha')?.valueChanges.subscribe(fecha => {
+      if (fecha && this.selectedBarbero()) {
+        // Reiniciar la hora si la fecha cambia y hay un barbero seleccionado
+        this.reservaForm.patchValue({ hora: '' });
+        this.selectedTime.set('');
+        this.cargarHorasDisponibles();
+      }
+    });
   }
+
+  // --- Lógica de Pasos y Selección ---
 
   selectService(servicio: any): void {
     this.selectedService.set(servicio);
@@ -84,8 +99,6 @@ export class ReservarComponent {
     this.reservaForm.patchValue({ barbero: barbero.id });
     this.loadDisponibilidadBarbero();
 
-    if (this.currentStep() === 2) this.nextStep();
-  }
 
   selectTime(hora: string): void {
     this.selectedTime.set(hora);
@@ -151,6 +164,7 @@ export class ReservarComponent {
   }
 
   isStepValid(step: number): boolean {
+    // Valida que el dato clave para cada paso esté seleccionado
     return {
       1: !!this.selectedService(),
       2: !!this.selectedBarbero(),
@@ -158,14 +172,53 @@ export class ReservarComponent {
     }[step] ?? true;
   }
 
-  generateHorasDisponibles(): void {
-    const horas: string[] = [];
-    for (let i = 9; i < 18; i++) {
-      horas.push(`${i.toString().padStart(2, '0')}:00`);
-      horas.push(`${i.toString().padStart(2, '0')}:30`);
+  // --- Lógica de Disponibilidad ---
+
+  // En ReservarComponent
+
+// En ReservarComponent
+
+private cargarHorasDisponibles(): void {
+  const barberoId = this.selectedBarbero()?.id;
+
+const fechaCruda = this.reservaForm.get('fecha')?.value;
+if (!barberoId || !fechaCruda) {
+  this.horasDisponibles.set([]);
+  return;
+}
+
+// Parsear como fecha LOCAL (no UTC)
+const [year, month, day] = fechaCruda.split('-').map(Number);
+const fechaStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+
+  console.log("Cargando horas para barberoId:", barberoId, "en fecha:", fechaStr);
+  this.reservaService.getDisponibilidadBarbero(barberoId, fechaStr).subscribe({
+    next: (response: any) => {
+      if (response.success && response.data) {
+        const horarios = response.data.horarios ?? [];
+console.log("Fecha enviada:", fechaStr);
+console.log("Horarios:", response.data.horarios);
+
+
+        const horarioDelDia = horarios.find(
+          (h: any) => h.fecha === fechaStr
+        );
+
+        if (horarioDelDia?.horasDisponibles) {
+          this.horasDisponibles.set(horarioDelDia.horasDisponibles);
+        } else {
+          this.horasDisponibles.set([]);
+        }
+      } else {
+        this.horasDisponibles.set([]);
+      }
+    },
+    error: (err) => {
+      console.error('Error al cargar horas disponibles:', err);
+      this.horasDisponibles.set([]);
     }
-    this.horasDisponibles.set(horas);
-  }
+  });
+}
 
   isTimeAvailable(hora: string): boolean {
     const set = this.availableHours();
@@ -173,6 +226,8 @@ export class ReservarComponent {
     return set.has(hora);
   }
 
+  // --- Lógica de Finalización ---
+  
   getSelectedServicePrice(): number {
     return this.selectedService()?.precio || 0;
   }
@@ -184,6 +239,15 @@ export class ReservarComponent {
     });
   }
 
+selectBarbero(barbero: any) {
+  // ... tu lógica actual para seleccionar barbero
+  this.selectedBarbero.set(barbero);
+  
+  // Si ya hay fecha seleccionada, cargar horas
+  if (this.reservaForm.get('fecha')?.value) {
+    this.cargarHorasDisponibles();
+  }
+}
   onSubmit(): void {
     if (!this.reservaForm.valid) return;
 
@@ -214,6 +278,8 @@ export class ReservarComponent {
     });
   }
 
+  // --- Funciones Auxiliares ---
+  
   trackByServicioId(_: number, s: any) { return s.id; }
   trackByBarberoId(_: number, b: any) { return b.id; }
   trackByHora(_: number, h: string) { return h; }

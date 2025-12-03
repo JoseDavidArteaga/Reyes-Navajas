@@ -327,6 +327,11 @@ mapHorasDisponiblesPorFecha(disponibilidad: ApiResponse<DisponibilidadBarbero> |
     return horas;
   }
 
+
+/**
+ * Obtiene la disponibilidad de un barbero
+ */
+
   private loadReservas(): void {
     this.getAllReservas().subscribe();
   }
