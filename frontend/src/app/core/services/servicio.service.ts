@@ -1,14 +1,14 @@
 import { Injectable, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, of } from 'rxjs';
-import { tap } from 'rxjs/operators';
+import { tap, catchError } from 'rxjs/operators';
 import { Servicio, CreateServicioRequest, UpdateServicioRequest, ApiResponse } from '../interfaces';
+import { API_CONFIG } from '../config/api.config';
 
 @Injectable({
   providedIn: 'root'
 })
 export class ServicioService {
-  private readonly API_URL = 'http://localhost:8080/api/servicios';
   private serviciosSignal = signal<Servicio[]>([]);
   private isLoadingSignal = signal<boolean>(false);
 
@@ -71,65 +71,53 @@ export class ServicioService {
   getAllServicios(): Observable<ApiResponse<Servicio[]>> {
     this.isLoadingSignal.set(true);
     
-    const mockResponse: ApiResponse<Servicio[]> = {
-      success: true,
-      data: this.mockServicios
-    };
-
-    return of(mockResponse).pipe(
+    return this.http.get<ApiResponse<Servicio[]>>(API_CONFIG.ENDPOINTS.CATALOGO + '/servicios').pipe(
       tap(response => {
         if (response.success) {
           this.serviciosSignal.set(response.data);
         }
         this.isLoadingSignal.set(false);
-      })
-    );
-
-    // Implementación real:
-    /*
-    return this.http.get<ApiResponse<Servicio[]>>(this.API_URL).pipe(
-      tap(response => {
-        if (response.success) {
-          this.serviciosSignal.set(response.data);
-        }
+      }),
+      catchError(error => {
         this.isLoadingSignal.set(false);
+        return of({
+          success: false,
+          error: error.error?.message || 'Error al obtener servicios',
+          data: []
+        } as ApiResponse<Servicio[]>);
       })
     );
-    */
   }
 
   getServicioById(id: string): Observable<ApiResponse<Servicio>> {
-    const servicio = this.mockServicios.find(s => s.id === id);
-    
-    return of({
-      success: !!servicio,
-      data: servicio!
-    });
+    return this.http.get<ApiResponse<Servicio>>(`${API_CONFIG.ENDPOINTS.CATALOGO}/servicios/${id}`).pipe(
+      catchError(error => {
+        return of({
+          success: false,
+          error: error.error?.message || 'Error al obtener servicio',
+          data: null as any
+        } as ApiResponse<Servicio>);
+      })
+    );
   }
 
   createServicio(servicio: CreateServicioRequest): Observable<ApiResponse<Servicio>> {
     this.isLoadingSignal.set(true);
     
-    const newServicio: Servicio = {
-      id: Date.now().toString(),
-      ...servicio,
-      activo: true,
-      fechaCreacion: new Date()
-    };
-
-    this.mockServicios.push(newServicio);
-
-    const mockResponse: ApiResponse<Servicio> = {
-      success: true,
-      data: newServicio
-    };
-
-    return of(mockResponse).pipe(
+    return this.http.post<ApiResponse<Servicio>>(API_CONFIG.ENDPOINTS.CATALOGO + '/servicios', servicio).pipe(
       tap(response => {
         if (response.success) {
-          this.serviciosSignal.set([...this.mockServicios]);
+          this.loadServicios();
         }
         this.isLoadingSignal.set(false);
+      }),
+      catchError(error => {
+        this.isLoadingSignal.set(false);
+        return of({
+          success: false,
+          error: error.error?.message || 'Error al crear servicio',
+          data: null as any
+        } as ApiResponse<Servicio>);
       })
     );
   }
@@ -137,22 +125,20 @@ export class ServicioService {
   updateServicio(id: string, servicio: UpdateServicioRequest): Observable<ApiResponse<Servicio>> {
     this.isLoadingSignal.set(true);
     
-    const index = this.mockServicios.findIndex(s => s.id === id);
-    if (index !== -1) {
-      this.mockServicios[index] = { ...this.mockServicios[index], ...servicio };
-    }
-
-    const mockResponse: ApiResponse<Servicio> = {
-      success: index !== -1,
-      data: this.mockServicios[index]
-    };
-
-    return of(mockResponse).pipe(
+    return this.http.put<ApiResponse<Servicio>>(`${API_CONFIG.ENDPOINTS.CATALOGO}/servicios/${id}`, servicio).pipe(
       tap(response => {
         if (response.success) {
-          this.serviciosSignal.set([...this.mockServicios]);
+          this.loadServicios();
         }
         this.isLoadingSignal.set(false);
+      }),
+      catchError(error => {
+        this.isLoadingSignal.set(false);
+        return of({
+          success: false,
+          error: error.error?.message || 'Error al actualizar servicio',
+          data: null as any
+        } as ApiResponse<Servicio>);
       })
     );
   }
@@ -160,33 +146,34 @@ export class ServicioService {
   deleteServicio(id: string): Observable<ApiResponse<void>> {
     this.isLoadingSignal.set(true);
     
-    const index = this.mockServicios.findIndex(s => s.id === id);
-    if (index !== -1) {
-      this.mockServicios.splice(index, 1);
-    }
-
-    const mockResponse: ApiResponse<void> = {
-      success: index !== -1,
-      data: undefined as any
-    };
-
-    return of(mockResponse).pipe(
+    return this.http.delete<ApiResponse<void>>(`${API_CONFIG.ENDPOINTS.CATALOGO}/servicios/${id}`).pipe(
       tap(response => {
         if (response.success) {
-          this.serviciosSignal.set([...this.mockServicios]);
+          this.loadServicios();
         }
         this.isLoadingSignal.set(false);
+      }),
+      catchError(error => {
+        this.isLoadingSignal.set(false);
+        return of({
+          success: false,
+          error: error.error?.message || 'Error al eliminar servicio',
+          data: undefined as any
+        } as ApiResponse<void>);
       })
     );
   }
 
   getServiciosActivos(): Observable<ApiResponse<Servicio[]>> {
-    const serviciosActivos = this.mockServicios.filter(s => s.activo);
-    
-    return of({
-      success: true,
-      data: serviciosActivos
-    });
+    return this.http.get<ApiResponse<Servicio[]>>(API_CONFIG.ENDPOINTS.CATALOGO + '/servicios/activos').pipe(
+      catchError(error => {
+        return of({
+          success: false,
+          error: error.error?.message || 'Error al obtener servicios activos',
+          data: []
+        } as ApiResponse<Servicio[]>);
+      })
+    );
   }
 
   private loadServicios(): void {

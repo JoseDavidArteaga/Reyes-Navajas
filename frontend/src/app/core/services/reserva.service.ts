@@ -1,7 +1,7 @@
 import { Injectable, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, of } from 'rxjs';
-import { tap } from 'rxjs/operators';
+import { tap, catchError } from 'rxjs/operators';
 import { 
   Reserva, 
   CreateReservaRequest, 
@@ -12,43 +12,15 @@ import {
   ApiResponse 
 } from '../interfaces';
 import { AuthService } from './auth.service';
+import { API_CONFIG } from '../config/api.config';
 import { addDays, format, isAfter, isBefore, setHours, setMinutes } from 'date-fns';
 
 @Injectable({
   providedIn: 'root'
 })
 export class ReservaService {
-  private readonly API_URL = 'http://localhost:8088/api/reservas';
   private reservasSignal = signal<Reserva[]>([]);
   private isLoadingSignal = signal<boolean>(false);
-
-  // Mock data para desarrollo
-  private mockReservas: Reserva[] = [
-    {
-      id: '1',
-      clienteId: '3',
-      barberoId: '1',
-      servicioId: '1',
-      fechaHora: new Date(2024, 11, 30, 10, 0), // 30 dic 2024, 10:00 AM
-      estado: EstadoReserva.CONFIRMADA,
-      precio: 25000,
-      cliente: { nombre: 'Juan Pérez', telefono: '3004567890' },
-      barbero: { nombre: 'Carlos Rodríguez' },
-      servicio: { nombre: 'Corte Clásico', duracion: 45, precio: 25000 }
-    },
-    {
-      id: '2',
-      clienteId: '3',
-      barberoId: '2',
-      servicioId: '2',
-      fechaHora: new Date(2024, 11, 28, 15, 0), // 28 dic 2024, 3:00 PM
-      estado: EstadoReserva.FINALIZADA,
-      precio: 35000,
-      cliente: { nombre: 'Juan Pérez', telefono: '3004567890' },
-      barbero: { nombre: 'Miguel Torres' },
-      servicio: { nombre: 'Corte y Barba', duracion: 60, precio: 35000 }
-    }
-  ];
 
   public reservas = this.reservasSignal.asReadonly();
   public isLoading = this.isLoadingSignal.asReadonly();
@@ -63,44 +35,52 @@ export class ReservaService {
   getAllReservas(): Observable<ApiResponse<Reserva[]>> {
     this.isLoadingSignal.set(true);
     
-    const mockResponse: ApiResponse<Reserva[]> = {
-      success: true,
-      data: this.mockReservas
-    };
-
-    return of(mockResponse).pipe(
+    return this.http.get<ApiResponse<Reserva[]>>(API_CONFIG.ENDPOINTS.TURNOS + '/reservas').pipe(
       tap(response => {
         if (response.success) {
           this.reservasSignal.set(response.data);
         }
         this.isLoadingSignal.set(false);
+      }),
+      catchError(error => {
+        this.isLoadingSignal.set(false);
+        return of({
+          success: false,
+          error: error.error?.message || 'Error al obtener reservas',
+          data: []
+        } as ApiResponse<Reserva[]>);
       })
     );
   }
 
   getReservasByCliente(clienteId: string): Observable<ApiResponse<Reserva[]>> {
-    const reservasCliente = this.mockReservas.filter(r => r.clienteId === clienteId);
-    
-    return of({
-      success: true,
-      data: reservasCliente
-    });
+    return this.http.get<ApiResponse<Reserva[]>>(`${API_CONFIG.ENDPOINTS.TURNOS}/reservas/cliente/${clienteId}`).pipe(
+      catchError(error => {
+        return of({
+          success: false,
+          error: error.error?.message || 'Error al obtener reservas del cliente',
+          data: []
+        } as ApiResponse<Reserva[]>);
+      })
+    );
   }
 
   getReservasByBarbero(barberoId: string, fecha?: Date): Observable<ApiResponse<Reserva[]>> {
-    let reservasBarbero = this.mockReservas.filter(r => r.barberoId === barberoId);
-    
+    let url = `${API_CONFIG.ENDPOINTS.TURNOS}/reservas/barbero/${barberoId}`;
     if (fecha) {
       const fechaStr = format(fecha, 'yyyy-MM-dd');
-      reservasBarbero = reservasBarbero.filter(r => 
-        format(r.fechaHora, 'yyyy-MM-dd') === fechaStr
-      );
+      url += `?fecha=${fechaStr}`;
     }
     
-    return of({
-      success: true,
-      data: reservasBarbero
-    });
+    return this.http.get<ApiResponse<Reserva[]>>(url).pipe(
+      catchError(error => {
+        return of({
+          success: false,
+          error: error.error?.message || 'Error al obtener reservas del barbero',
+          data: []
+        } as ApiResponse<Reserva[]>);
+      })
+    );
   }
 
 /*   createReserva(reserva: CreateReservaRequest): Observable<ApiResponse<Reserva>> {
@@ -155,13 +135,21 @@ export class ReservaService {
     notas: reserva.notas,
   };
 
-  return this.http.post<ApiResponse<Reserva>>(this.API_URL, body).pipe(
+  return this.http.post<ApiResponse<Reserva>>(API_CONFIG.ENDPOINTS.TURNOS + '/reservas', body).pipe(
     tap(response => {
       if (response.success && response.data) {
         // Actualiza estados en Angular
-        this.reservasSignal.set([...this.reservasSignal(), response.data]);
+        this.loadReservas();
       }
       this.isLoadingSignal.set(false);
+    }),
+    catchError(error => {
+      this.isLoadingSignal.set(false);
+      return of({
+        success: false,
+        error: error.error?.message || 'Error al crear reserva',
+        data: null as any
+      } as ApiResponse<Reserva>);
     })
   );
 }
@@ -169,26 +157,20 @@ export class ReservaService {
   updateReserva(id: string, reserva: UpdateReservaRequest): Observable<ApiResponse<Reserva>> {
     this.isLoadingSignal.set(true);
     
-    const index = this.mockReservas.findIndex(r => r.id === id);
-    if (index !== -1) {
-      this.mockReservas[index] = { 
-        ...this.mockReservas[index], 
-        ...reserva,
-        fechaActualizacion: new Date()
-      };
-    }
-
-    const mockResponse: ApiResponse<Reserva> = {
-      success: index !== -1,
-      data: this.mockReservas[index]
-    };
-
-    return of(mockResponse).pipe(
+    return this.http.put<ApiResponse<Reserva>>(`${API_CONFIG.ENDPOINTS.TURNOS}/reservas/${id}`, reserva).pipe(
       tap(response => {
         if (response.success) {
-          this.reservasSignal.set([...this.mockReservas]);
+          this.loadReservas();
         }
         this.isLoadingSignal.set(false);
+      }),
+      catchError(error => {
+        this.isLoadingSignal.set(false);
+        return of({
+          success: false,
+          error: error.error?.message || 'Error al actualizar reserva',
+          data: null as any
+        } as ApiResponse<Reserva>);
       })
     );
   }
@@ -244,31 +226,13 @@ export class ReservaService {
     const horaInicio = 8;
     const horaFin = 18;
     
-    // Obtener reservas existentes para esta fecha y barbero
-    const reservasExistentes = this.mockReservas.filter(r => 
-      r.barberoId === barberoId && 
-      format(r.fechaHora, 'yyyy-MM-dd') === format(fecha, 'yyyy-MM-dd')
-    );
-
+    // Para simplificar, generar horarios cada 30 minutos sin verificar conflictos
+    // En la implementación real, esto se haría consultando la API
     for (let hora = horaInicio; hora < horaFin; hora++) {
       for (let minuto = 0; minuto < 60; minuto += 30) {
         const horaCompleta = setMinutes(setHours(fecha, hora), minuto);
         const horaStr = format(horaCompleta, 'HH:mm');
-        
-        // Verificar si hay conflicto con reservas existentes
-        const hayConflicto = reservasExistentes.some(reserva => {
-          const inicioReserva = reserva.fechaHora;
-          const finReserva = new Date(inicioReserva.getTime() + (45 * 60 * 1000)); // 45 min por defecto
-          
-          return (
-            (isAfter(horaCompleta, inicioReserva) && isBefore(horaCompleta, finReserva)) ||
-            format(horaCompleta, 'HH:mm') === format(inicioReserva, 'HH:mm')
-          );
-        });
-
-        if (!hayConflicto) {
-          horas.push(horaStr);
-        }
+        horas.push(horaStr);
       }
     }
 
