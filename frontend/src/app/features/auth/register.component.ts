@@ -5,6 +5,7 @@ import { Router, RouterModule } from '@angular/router';
 import { AuthService } from '../../core';
 import { LoadingSpinnerComponent } from '../../shared';
 import { ToastrService } from 'ngx-toastr';
+import { TelefonoDisponibleValidator } from '../../core/validators/telefono-disponible.validator';
 
 @Component({
   selector: 'app-register',
@@ -78,6 +79,9 @@ import { ToastrService } from 'ngx-toastr';
                   }
                   @if (registerForm.get('telefono')?.errors?.['pattern']) {
                     Ingresa un número válido (10 dígitos, iniciando con 3)
+                  }
+                  @if (registerForm.get('telefono')?.errors?.['telefonoNoDisponible']) {
+                    Este número de teléfono ya está registrado
                   }
                 </div>
               }
@@ -223,17 +227,22 @@ export class RegisterComponent {
     private fb: FormBuilder,
     private router: Router,
     public authService: AuthService,
-    private toastr: ToastrService
+    private toastr: ToastrService,
+    private telefonoValidator: TelefonoDisponibleValidator
   ) {
     this.registerForm = this.fb.group({
       nombre: ['', [
         Validators.required,
         Validators.minLength(2)
       ]],
-      telefono: ['', [
-        Validators.required,
-        Validators.pattern(/^3\d{9}$/) // Formato colombiano: 3XXXXXXXXX
-      ]],
+      telefono: ['', {
+        validators: [
+          Validators.required,
+          Validators.pattern(/^3\d{9}$/) // Formato colombiano: 3XXXXXXXXX
+        ],
+        asyncValidators: [this.telefonoValidator.validate.bind(this.telefonoValidator)],
+        updateOn: 'blur' // Solo validar cuando pierda el foco
+      }],
       password: ['', [
         Validators.required,
         Validators.minLength(6),

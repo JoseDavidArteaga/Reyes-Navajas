@@ -41,6 +41,12 @@ public class UsuarioService {
     }
 
     @Transactional
+    public Optional<User> findByTelefono(String telefono) {
+        log.debug("Buscando usuario por teléfono: {}", telefono);
+        return repository.findByTelefono(telefono);
+    }
+
+    @Transactional
     public Optional<User> findById(Long id) {
         return repository.findById(id);
     }
@@ -162,6 +168,43 @@ public class UsuarioService {
             repository.deleteById(id);
             log.info("Barbero eliminado exitosamente: {} (ID: {})", user.getNombre(), id);
         }
+    }
+    
+    @Transactional
+    public User cambiarEstadoBarbero(Long id, Boolean nuevoEstado) {
+        log.info("Cambiando estado del barbero ID {} a {}", id, nuevoEstado);
+        
+        Optional<User> opt = repository.findById(id);
+        if (opt.isEmpty()) {
+            throw new RuntimeException("Barbero no encontrado con ID: " + id);
+        }
+        
+        User barbero = opt.get();
+        if (!"barbero".equals(barbero.getRol())) {
+            throw new RuntimeException("El usuario con ID " + id + " no es un barbero");
+        }
+        
+        barbero.setEstado(nuevoEstado);
+        User actualizado = repository.save(barbero);
+        
+        log.info("Estado del barbero {} (ID: {}) actualizado a {}", 
+                actualizado.getNombre(), id, nuevoEstado);
+        
+        // Publicar evento de actualización
+        try {
+            co.edu.unicauca.UsuariosMicroService.infra.dto.UserUpdateRequest update = 
+                new co.edu.unicauca.UsuariosMicroService.infra.dto.UserUpdateRequest();
+            update.setInternalId(actualizado.getId());
+            update.setUsername(actualizado.getNombre());
+            update.setRole(actualizado.getRol());
+            update.setEnabled(actualizado.isEstado());
+            rabbitTemplate.convertAndSend(RabbitMQConfig.USER_QUEUE_UPDATED, update);
+            log.debug("Evento de actualización de estado publicado para barbero: {}", actualizado.getNombre());
+        } catch (Exception e) {
+            log.warn("Error publicando evento de actualización de estado del barbero: {}", e.getMessage());
+        }
+
+        return actualizado;
     }
     
     private String generateEmail(User user) {

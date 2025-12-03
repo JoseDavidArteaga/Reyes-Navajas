@@ -78,12 +78,17 @@
                 <div class="flex space-x-2">
                   <button 
                     (click)="editBarbero(barbero)"
-                    class="text-blue-400 hover:text-blue-300 text-sm">
+                    class="btn-secondary btn-sm rounded-full min-w-[60px]">
                     Editar
                   </button>
                   <button 
+                    (click)="toggleEstado(barbero)"
+                    [class]="barbero.estado === 'ACTIVO' ? 'btn-warning btn-sm rounded-full min-w-[70px]' : 'btn-success btn-sm rounded-full min-w-[70px]'">
+                    {{ barbero.estado === 'ACTIVO' ? 'Desactivar' : 'Activar' }}
+                  </button>
+                  <button 
                     (click)="deleteBarbero(barbero)"
-                    class="text-red-400 hover:text-red-300 text-sm">
+                    class="btn-danger btn-sm rounded-full min-w-[60px]">
                     Eliminar
                   </button>
                 </div>
@@ -141,6 +146,7 @@
           <div *ngIf="barberoForm.get('telefono')?.errors?.['required']">El teléfono es requerido</div>
           <div *ngIf="barberoForm.get('telefono')?.errors?.['pattern']">Ingresa un número válido (10 dígitos, iniciando con 3)</div>
           <div *ngIf="barberoForm.get('telefono')?.errors?.['minlength'] || barberoForm.get('telefono')?.errors?.['maxlength']">El teléfono debe tener exactamente 10 dígitos</div>
+          <div *ngIf="barberoForm.get('telefono')?.errors?.['telefonoNoDisponible']">Este número de teléfono ya está registrado</div>
         </div>
       </div>
 

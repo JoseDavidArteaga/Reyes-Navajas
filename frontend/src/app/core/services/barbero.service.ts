@@ -65,7 +65,12 @@ export class BarberoService {
     return this.http.get<ApiResponse<Barbero[]>>(this.API_URL).pipe(
       tap(response => {
         if (response.success) {
-          this.barberosSignal.set(response.data);
+          // Mapear la respuesta del backend al formato esperado
+          const mappedBarberos = response.data.map(b => ({
+            ...b,
+            estado: b.estado ? EstadoBarbero.ACTIVO : EstadoBarbero.INACTIVO
+          }));
+          this.barberosSignal.set(mappedBarberos);
         }
         this.isLoadingSignal.set(false);
       }),
@@ -180,6 +185,40 @@ export class BarberoService {
 
   cambiarEstadoBarbero(id: string, estado: EstadoBarbero): Observable<ApiResponse<Barbero>> {
     return this.updateBarbero(id, { estado });
+  }
+
+  // Método específico para toggle de estado (similar a servicios)
+  toggleEstadoBarbero(id: string, nuevoEstado: boolean): Observable<ApiResponse<Barbero>> {
+    this.isLoadingSignal.set(true);
+    console.log(`Changing estado of barbero ${id} to ${nuevoEstado}`);
+    
+    return this.http.put<any>(`${this.API_URL}/${id}/estado?estado=${nuevoEstado}`, {}).pipe(
+      tap(response => {
+        if (response.success) {
+          // Actualizar el estado local del barbero
+          const currentBarberos = this.barberosSignal();
+          const index = currentBarberos.findIndex(b => b.id === id);
+          if (index !== -1) {
+            const updatedBarberos = [...currentBarberos];
+            updatedBarberos[index] = {
+              ...updatedBarberos[index],
+              estado: nuevoEstado ? EstadoBarbero.ACTIVO : EstadoBarbero.INACTIVO
+            };
+            this.barberosSignal.set(updatedBarberos);
+          }
+        }
+        this.isLoadingSignal.set(false);
+      }),
+      catchError(error => {
+        console.error('Error changing barbero state:', error);
+        this.isLoadingSignal.set(false);
+        return of({ 
+          success: false, 
+          error: 'Error al cambiar estado del barbero',
+          data: null as any
+        } as ApiResponse<Barbero>);
+      })
+    );
   }
 
   private loadBarberos(): void {

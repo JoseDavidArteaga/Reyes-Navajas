@@ -8,4 +8,5 @@ public class UsuarioResumenDTO {
     private String nombre;
     private String telefono;
     private String rol;
+    private Boolean estado; // Campo para el estado del usuario
 }

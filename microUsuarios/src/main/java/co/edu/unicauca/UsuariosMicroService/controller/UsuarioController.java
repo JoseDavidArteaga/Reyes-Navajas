@@ -50,6 +50,22 @@ public class UsuarioController {
                     .body(Map.of("success", false, "message", "La contraseña debe tener mínimo 6 caracteres"));
             }
             
+            // Validar duplicados
+            Optional<User> existingUserByName = service.findByNombre(newUser.getNombre());
+            if (existingUserByName.isPresent()) {
+                throw new UserAlreadyExistsException("El nombre de usuario ya está registrado");
+            }
+            
+            // Validar teléfono duplicado
+            Optional<User> existingUserByPhone = service.findByTelefono(newUser.getTelefono());
+            if (existingUserByPhone.isPresent()) {
+                return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(Map.of(
+                        "success", false, 
+                        "message", "El número de teléfono " + newUser.getTelefono() + " ya está registrado"
+                    ));
+            }
+            
             log.info("Iniciando registro de nuevo cliente: {}", newUser.getNombre());
             
             // Asignar rol por defecto
@@ -105,6 +121,16 @@ public class UsuarioController {
         log.info("Creando usuario: {} con rol: {}", newUser.getNombre(), newUser.getRol());
         // Aquí se respeta el rol enviado: administrador, barbero, cliente
         try {
+            // Validar teléfono duplicado
+            Optional<User> existingUserByPhone = service.findByTelefono(newUser.getTelefono());
+            if (existingUserByPhone.isPresent()) {
+                return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(Map.of(
+                        "success", false,
+                        "message", "El número de teléfono " + newUser.getTelefono() + " ya está registrado"
+                    ));
+            }
+            
             User saved = service.save(newUser);
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
@@ -203,6 +229,22 @@ public class UsuarioController {
         return ResponseEntity.ok(users);
     }
 
+    // -------------------------------------------
+    // VERIFICAR DISPONIBILIDAD DE TELÉFONO
+    // -------------------------------------------
+    @GetMapping("/verificar-telefono/{telefono}")
+    public ResponseEntity<?> verificarTelefonoDisponible(@PathVariable String telefono) {
+        log.info("Verificando disponibilidad del teléfono: {}", telefono);
+        
+        Optional<User> existingUser = service.findByTelefono(telefono);
+        if (existingUser.isPresent()) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(Map.of("success", false, "message", "El teléfono ya está registrado"));
+        }
+        
+        return ResponseEntity.ok(Map.of("success", true, "message", "Teléfono disponible"));
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<?> getUsuarioById(@PathVariable String id) {
 
@@ -219,6 +261,7 @@ public class UsuarioController {
         dto.setNombre(u.getNombre());
         dto.setTelefono(u.getTelefono());
         dto.setRol(u.getRol());
+        dto.setEstado(u.isEstado());
 
         return ResponseEntity.ok(dto);
     }
@@ -239,6 +282,7 @@ public class UsuarioController {
         dto.setNombre(u.getNombre());
         dto.setTelefono(u.getTelefono());
         dto.setRol(u.getRol());
+        dto.setEstado(u.isEstado());
 
         return ResponseEntity.ok(dto);
     }
@@ -271,6 +315,7 @@ public class UsuarioController {
         dto.setNombre(barbero.getNombre());
         dto.setTelefono(barbero.getTelefono());
         dto.setRol(barbero.getRol());
+        dto.setEstado(barbero.isEstado());
 
         return ResponseEntity.ok(dto);
     }
@@ -294,6 +339,35 @@ public class UsuarioController {
             log.error("Error eliminando barbero id {}: ", id, e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("success", false, "message", "Error interno al eliminar barbero"));
+        }
+    }
+
+    // -------------------------------------------
+    // 7. CAMBIAR ESTADO DEL BARBERO (ACTIVAR/DESACTIVAR)
+    // -------------------------------------------
+    @PutMapping("/barberos/{id}/estado")
+    public ResponseEntity<?> cambiarEstadoBarbero(
+            @PathVariable Long id,
+            @RequestParam("estado") Boolean nuevoEstado) {
+        
+        log.info("Cambiando estado del barbero ID {} a {}", id, nuevoEstado);
+        Optional<User> opt = service.findBarberoById(id);
+        if (opt.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("success", false, "message", "Barbero no encontrado"));
+        }
+
+        try {
+            User actualizado = service.cambiarEstadoBarbero(id, nuevoEstado);
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("data", actualizado);
+            response.put("message", "Estado del barbero actualizado exitosamente");
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("Error cambiando estado del barbero id {}: ", id, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("success", false, "message", "Error interno al cambiar estado del barbero"));
         }
     }
 }

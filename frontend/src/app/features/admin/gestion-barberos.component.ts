@@ -4,6 +4,7 @@ import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angula
 import { BarberoService } from '../../core';
 import { EstadoBarbero } from '../../core/interfaces/barbero.interface';
 import { LoadingSpinnerComponent, ModalComponent } from '../../shared';
+import { TelefonoDisponibleValidator } from '../../core/validators/telefono-disponible.validator';
 
 @Component({
   selector: 'app-gestion-barberos',
@@ -29,12 +30,22 @@ export class GestionBarberosComponent implements OnInit {
 
   constructor(
     private fb: FormBuilder,
-    public barberoService: BarberoService
+    public barberoService: BarberoService,
+    private telefonoValidator: TelefonoDisponibleValidator
   ) {
     this.barberoForm = this.fb.group({
-          nombre: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(15)]],
-      telefono: ['', [Validators.required, Validators.pattern(/^3\d{9}$/), Validators.minLength(10), Validators.maxLength(10)]],
-          contrasenia: ['', [Validators.required, Validators.minLength(6), Validators.maxLength(15), Validators.pattern(/^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d@$!%*?&]{6,}$/)]]
+      nombre: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(15)]],
+      telefono: ['', {
+        validators: [
+          Validators.required, 
+          Validators.pattern(/^3\d{9}$/), 
+          Validators.minLength(10), 
+          Validators.maxLength(10)
+        ],
+        asyncValidators: [this.telefonoValidator.validate.bind(this.telefonoValidator)],
+        updateOn: 'blur'
+      }],
+      contrasenia: ['', [Validators.required, Validators.minLength(6), Validators.maxLength(15), Validators.pattern(/^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d@$!%*?&]{6,}$/)]]
     });
   }
 
@@ -237,8 +248,31 @@ export class GestionBarberosComponent implements OnInit {
       case 'ACTIVO': return baseClass + 'badge-success';
       case 'OCUPADO': return baseClass + 'badge-warning';
       case 'DESCANSO': return baseClass + 'badge-info';
+      case 'INACTIVO': return baseClass + 'badge-danger';
       default: return baseClass + 'badge-danger';
     }
+  }
+
+  toggleEstado(barbero: any): void {
+    const nuevoEstado = barbero.estado !== 'ACTIVO';
+    this.barberoService.toggleEstadoBarbero(barbero.id, nuevoEstado).subscribe({
+      next: (response) => {
+        if (response.success) {
+          this.successMessage.set(`Barbero ${nuevoEstado ? 'activado' : 'desactivado'} exitosamente`);
+          setTimeout(() => this.successMessage.set(null), 3000);
+        } else {
+          this.errorMessage.set('Error al cambiar estado del barbero');
+        }
+      },
+      error: (error) => {
+        console.error('Error al cambiar estado:', error);
+        this.errorMessage.set('Error al cambiar estado del barbero');
+      }
+    });
+  }
+
+  getStatusBadgeClass(estado: string): string {
+    return estado === 'ACTIVO' ? 'badge badge-success' : 'badge badge-danger';
   }
 
   // Métodos trackBy para optimizar el rendimiento

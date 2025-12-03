@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { authGuard, adminGuard, barberoGuard, clienteGuard, guestGuard } from './core';
+import { barberoActivoGuard } from './core/guards/barbero-activo.guard';
 
 export const routes: Routes = [
   // Ruta por defecto
@@ -47,12 +48,18 @@ export const routes: Routes = [
     canActivate: [authGuard, barberoGuard],
     children: [
       {
+        path: 'cuenta-deshabilitada',
+        loadComponent: () => import('./features/barbero/cuenta-deshabilitada.component').then(m => m.CuentaDeshabilitadaComponent)
+      },
+      {
         path: 'agenda-diaria',
-        loadComponent: () => import('./features/barbero/agenda-diaria.component').then(m => m.AgendaDiariaComponent)
+        loadComponent: () => import('./features/barbero/agenda-diaria.component').then(m => m.AgendaDiariaComponent),
+        canActivate: [barberoActivoGuard]
       },
       {
         path: 'metricas',
-        loadComponent: () => import('./features/barbero/metricas.component').then(m => m.MetricasComponent)
+        loadComponent: () => import('./features/barbero/metricas.component').then(m => m.MetricasComponent),
+        canActivate: [barberoActivoGuard]
       },
       { path: '', redirectTo: 'agenda-diaria', pathMatch: 'full' }
     ]

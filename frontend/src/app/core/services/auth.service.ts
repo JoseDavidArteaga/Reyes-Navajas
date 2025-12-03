@@ -212,4 +212,42 @@ export class AuthService {
     const currentRole = this.userRole();
     return currentRole ? roles.includes(currentRole) : false;
   }
+
+  // Método para verificar el estado del barbero
+  verificarEstadoBarbero(): Observable<boolean> {
+    const usuario = this.currentUser();
+    if (!usuario || usuario.rol !== UserRole.BARBERO) {
+      return of(true); // Si no es barbero, siempre está "activo"
+    }
+
+    return this.http.get<any>(`http://localhost:8089/usuarios/name/${usuario.nombre}`).pipe(
+      map(response => {
+        // Actualizar la información del usuario con el estado actual
+        if (response && typeof response.estado !== 'undefined') {
+          const updatedUser = { ...usuario, activo: response.estado };
+          this.currentUserSignal.set(updatedUser);
+          localStorage.setItem(this.USER_KEY, JSON.stringify(updatedUser));
+          return response.estado;
+        }
+        return true; // Por defecto activo si no se puede determinar
+      }),
+      catchError(error => {
+        console.error('Error verificando estado del barbero:', error);
+        return of(true); // Por defecto activo en caso de error
+      })
+    );
+  }
+
+  // Verificar disponibilidad de teléfono
+  verificarTelefonoDisponible(telefono: string): Observable<boolean> {
+    return this.http.get(`http://localhost:8089/usuarios/verificar-telefono/${telefono}`).pipe(
+      map(() => true), // Si no hay error, el teléfono está disponible
+      catchError(error => {
+        if (error.status === 409) {
+          return of(false); // Teléfono ya registrado
+        }
+        return of(true); // En caso de otros errores, asumir que está disponible
+      })
+    );
+  }
 }

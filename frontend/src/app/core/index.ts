@@ -7,10 +7,14 @@ export * from './services/cola.service';
 export * from './services/three-scene.service';
 export * from './services/razor-scene.service';
 
+// Validators
+export * from './validators/telefono-disponible.validator';
+
 // Guards
 export * from './guards/auth.guard';
 export * from './guards/admin.guard';
 export * from './guards/barbero.guard';
+export * from './guards/barbero-activo.guard';
 export * from './guards/cliente.guard';
 export * from './guards/guest.guard';
 
