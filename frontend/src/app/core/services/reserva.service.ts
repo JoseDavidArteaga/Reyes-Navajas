@@ -9,7 +9,8 @@ import {
   DisponibilidadBarbero,
   HorarioDisponible,
   EstadoReserva,
-  ApiResponse 
+  ApiResponse,
+  Barbero
 } from '../interfaces';
 import { AuthService } from './auth.service';
 import { addDays, format, isAfter, isBefore, setHours, setMinutes } from 'date-fns';
@@ -133,42 +134,6 @@ export class ReservaService {
       })
     );
   }
-
-/*   createReserva(reserva: CreateReservaRequest): Observable<ApiResponse<Reserva>> {
-    this.isLoadingSignal.set(true);
-    
-    const currentUser = this.authService.currentUser();
-    if (!currentUser) {
-      throw new Error('Usuario no autenticado');
-    }
-
-    const newReserva: Reserva = {
-      id: Date.now().toString(),
-      clienteId: currentUser.id,
-      barberoId: reserva.barberoId,
-      servicioId: reserva.servicioId,
-      fechaHora: new Date(reserva.fechaHora),
-      estado: EstadoReserva.PENDIENTE,
-      notas: reserva.notas,
-      fechaCreacion: new Date()
-    };
-
-    this.mockReservas.push(newReserva);
-
-    const mockResponse: ApiResponse<Reserva> = {
-      success: true,
-      data: newReserva
-    };
-
-    return of(mockResponse).pipe(
-      tap(response => {
-        if (response.success) {
-          this.reservasSignal.set([...this.mockReservas]);
-        }
-        this.isLoadingSignal.set(false);
-      })
-    );
-  } */
   createReserva(reserva: CreateReservaRequest): Observable<ApiResponse<Reserva>> {
   this.isLoadingSignal.set(true);
 
@@ -305,32 +270,73 @@ marcarNoAsistio(id: string): Observable<ApiResponse<Reserva>> {
   );
 }
 
-  getDisponibilidadBarbero(barberoId: string, fechaInicio: Date, dias: number = 7): Observable<ApiResponse<DisponibilidadBarbero>> {
-    const horarios: HorarioDisponible[] = [];
+getBarberosByServicio(): Observable<ApiResponse<Barbero[]>> {
+    this.isLoadingSignal.set(true);
+
+    console.log(`[HTTP Request Log] Intentando obtener todos los barberos disponibles para el servicio.`);
+    // Endpoint que obtuviste que trae a TODOS los barberos
+    const url = `http://localhost:8089/usuarios/barberos`; 
     
-    for (let i = 0; i < dias; i++) {
-      const fecha = addDays(fechaInicio, i);
-      const fechaStr = format(fecha, 'yyyy-MM-dd');
-      
-      // Generar horarios disponibles (mock)
-      const horasDisponibles = this.generarHorasDisponibles(barberoId, fecha);
-      
-      horarios.push({
-        fecha: fechaStr,
-        horasDisponibles
-      });
-    }
+    return this.http.get<ApiResponse<Barbero[]>>(url).pipe(
+      map((response) => {
+          this.isLoadingSignal.set(false); // Detener la carga tras éxito
+          return response;
+      }),
+      catchError((error) => {
+          console.error('Error al obtener todos los barberos:', error);
+          this.isLoadingSignal.set(false); // Detener la carga tras error
+          
+          return of({
+            success: false,
+            data: [], 
+            message: 'Error de conexión. No se pudieron cargar los barberos.'
+          });
+      })
+    );
+}
 
-    const disponibilidad: DisponibilidadBarbero = {
-      barberoId,
-      horarios
-    };
+// Método anterior para disponibilidad
+// En ReservaService
 
-    return of({
-      success: true,
-      data: disponibilidad
-    });
-  }
+// La firma del método en el servicio
+getDisponibilidadBarbero(barberoId: string, fechaStr: string): Observable<ApiResponse<DisponibilidadBarbero>> {
+    this.isLoadingSignal.set(true);
+    
+    // Necesitas disponibilidad para un solo día, por lo que 'dias' es 1
+    const dias = 1; 
+    
+    // Construcción de la URL usando Query Parameters (similar a la solicitud RAW)
+    // Se asume que API_URL = 'http://localhost:8089/turnos'
+    const url = `${this.API_URL}/barbero/${barberoId}/disponibilidad?fechaInicio=${fechaStr}&dias=${dias}`;
+    
+    console.log(`[HTTP Request Log] Solicitando disponibilidad: GET ${url}`);
+
+    return this.http.get<ApiResponse<DisponibilidadBarbero>>(url).pipe(
+      map((response) => {
+          this.isLoadingSignal.set(false);
+          return response;
+      }),
+      catchError((error) => {
+          console.error('Error al obtener disponibilidad:', error);
+          this.isLoadingSignal.set(false);
+          
+          // Fallback (solo para el día solicitado)
+          const horarios: HorarioDisponible[] = [{
+            fecha: fechaStr,
+            horasDisponibles: [] // Vacío en caso de error
+          }];
+
+          return of({
+            success: false,
+            data: {
+              barberoId,
+              horarios
+            },
+            message: 'Error de conexión. No hay horas disponibles.'
+          });
+      })
+    );
+}
 
   private generarHorasDisponibles(barberoId: string, fecha: Date): string[] {
     const horas: string[] = [];
@@ -370,6 +376,11 @@ marcarNoAsistio(id: string): Observable<ApiResponse<Reserva>> {
 
     return horas;
   }
+
+
+/**
+ * Obtiene la disponibilidad de un barbero
+ */
 
   private loadReservas(): void {
     this.getAllReservas().subscribe();
