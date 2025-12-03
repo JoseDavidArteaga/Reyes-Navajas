@@ -241,8 +241,8 @@ export class ServicioService {
   // Método para cambiar estado del servicio
   toggleEstadoServicio(id: string, nuevoEstado: boolean): Observable<ApiResponse<Servicio>> {
     this.isLoadingSignal.set(true);
-    
-    return this.http.patch<any>(`${this.API_URL}/${id}/estado?estado=${nuevoEstado}`, {}).pipe(
+    console.log(`Changing estado of servicio ${id} to ${nuevoEstado}`);
+    return this.http.put<any>(`${this.API_URL}/${id}/estado?estado=${nuevoEstado}`, {}).pipe(
       tap(response => {
         // Recargar servicios después de cambiar estado
         this.getAllServicios().subscribe();

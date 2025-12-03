@@ -106,7 +106,7 @@ public class CatalogoController {
     // -------------------------------------------------------------
     // 6. CAMBIAR ESTADO DEL SERVICIO (ACTIVAR/DESACTIVAR)
     // -------------------------------------------------------------
-    @PatchMapping("/servicios/{id}/estado")
+    @PutMapping("/servicios/{id}/estado")
     public ResponseEntity<ServicioDTORespuesta> cambiarEstadoServicio(
             @PathVariable Long id,
             @RequestParam("estado") Boolean nuevoEstado) {
