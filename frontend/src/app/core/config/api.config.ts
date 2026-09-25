@@ -1,30 +1,36 @@
+import { environment } from '../../../environments/environment';
+
+// Único punto de verdad para las URLs del frontend.
+// En dev lee `environment.ts` (localhost); en prod (Vercel) Angular lo
+// sustituye por `environment.prod.ts` vía `fileReplacements` (angular.json).
+// Los servicios NUNCA deben quemar `http://localhost:...` directamente.
 export const API_CONFIG = {
   // API Gateway
-  GATEWAY_URL: 'http://localhost:8089',
-  
+  GATEWAY_URL: environment.gatewayUrl,
+
   // Keycloak
-  KEYCLOAK_URL: 'http://localhost:8080',
-  KEYCLOAK_REALM: 'MicroservicesBarber',
-  KEYCLOAK_CLIENT_ID: 'barber-service',
-  
+  KEYCLOAK_URL: environment.keycloakUrl,
+  KEYCLOAK_REALM: environment.keycloakRealm,
+  KEYCLOAK_CLIENT_ID: environment.keycloakClientId,
+
   // Endpoints a través del Gateway
   ENDPOINTS: {
     // Autenticación (Keycloak directo)
     AUTH: {
-      LOGIN: 'http://localhost:8080/realms/MicroservicesBarber/protocol/openid-connect/token',
-      REGISTER: 'http://localhost:8089/usuarios/registro'
+      LOGIN: `${environment.keycloakUrl}/realms/${environment.keycloakRealm}/protocol/openid-connect/token`,
+      REGISTER: `${environment.gatewayUrl}/usuarios/registro`
     },
-    
+
     // Usuarios
-    USUARIOS: 'http://localhost:8089/usuarios',
-    
+    USUARIOS: `${environment.gatewayUrl}/usuarios`,
+
     // Catálogo (servicios)
-    CATALOGO: 'http://localhost:8089/catalogo',
-    
+    CATALOGO: `${environment.gatewayUrl}/catalogo`,
+
     // Turnos y Reservas
-    TURNOS: 'http://localhost:8089/turnos',
-    
+    TURNOS: `${environment.gatewayUrl}/turnos`,
+
     // Barberos (a través de usuarios)
-    BARBEROS: 'http://localhost:8089/usuarios/barberos'
+    BARBEROS: `${environment.gatewayUrl}/usuarios/barberos`
   }
 };

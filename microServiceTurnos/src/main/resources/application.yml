@@ -7,9 +7,9 @@ spring:
 
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://localhost:3306/turnos_db?createDatabaseIfNotExist=true&serverTimezone=UTC
-    username: root
-    password: 
+    url: jdbc:mysql://${MYSQL_HOST:localhost}:${MYSQL_PORT:3306}/${MYSQL_DB_TURNOS:turnos_db}?createDatabaseIfNotExist=true&serverTimezone=UTC&allowPublicKeyRetrieval=true&useSSL=${MYSQL_USE_SSL:false}
+    username: ${MYSQL_USER:root}
+    password: ${MYSQL_PASSWORD:}
 
   jpa:
     hibernate:
@@ -23,7 +23,7 @@ spring:
 # IMPORTANTE: Ahora apunta al Gateway, no directo al microservicio
 usuarios:
   service:
-    url: http://localhost:8089/usuarios # CORREGIDO! Apuntando al Gateway en 8089
+    url: ${USUARIOS_SERVICE_URL:http://localhost:8089/usuarios} # En Docker: http://gateway:8089/usuarios
 
 
 whatsapp:
@@ -35,3 +35,9 @@ turnos:
   tolerancia-minutos: 10
   min-duration-minutes: 45
   buffer-minutes: 5
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

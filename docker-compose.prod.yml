@@ -1,0 +1,83 @@
+# Override de producción/demo — VM OCI (Opción A) + MySQL HeatWave + frontend en Vercel.
+#
+# Uso (en la VM, región sa-bogota-1):
+#   cp .env.prod.example .env.prod   # y rellenar valores
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.prod up -d --build
+#
+# Qué cambia respecto al compose base:
+# - `mysql` y `frontend` locales quedan desactivados por profiles (se usa HeatWave
+#   y Vercel respectivamente). Los `depends_on` hacia `mysql` se ignoran con un
+#   warning, es normal.
+# - Keycloak arranca en modo prod (`start`, no `start-dev`) con hostname público +
+#   proxy xforwarded (TLS termina en el Nginx del host), e importa
+#   `realm-export.prod.json` (URLs de Vercel).
+# - El gateway valida el issuer PÚBLICO (el `iss` del token lo pone el navegador)
+#   y permite CORS solo desde Vercel.
+# - Los micros apuntan a HeatWave con TLS (MYSQL_USE_SSL=true).
+# - RabbitMQ queda interno (NO abrir 5672/15672 en el security list de OCI).
+# - Los puertos publicados de los micros se blindan vía security list de OCI
+#   (abrir solo 22/80/443); Nginx hace proxy 443 -> 8089 (api) y 8080 (auth).
+
+name: reyes-navajas
+
+services:
+  mysql:
+    profiles: ["localdb"]
+
+  frontend:
+    profiles: ["localfront"]
+
+  usuarios:
+    depends_on: !override
+      rabbitmq:
+        condition: service_healthy
+      keycloak:
+        condition: service_started
+    environment:
+      MYSQL_HOST: ${MYSQL_HOST}
+      MYSQL_USER: ${MYSQL_USER:-admin}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?Falta MYSQL_PASSWORD en .env.prod}
+      MYSQL_USE_SSL: "true"
+
+  catalogo:
+    depends_on: !override
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      MYSQL_HOST: ${MYSQL_HOST}
+      MYSQL_USER: ${MYSQL_USER:-admin}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?Falta MYSQL_PASSWORD en .env.prod}
+      MYSQL_USE_SSL: "true"
+      # CatalogoService construye imagenUrl = baseUrl + "/catalogo/imagenes/...",
+      # que el gateway enruta (/catalogo/**) al micro. Debe ser la URL pública.
+      APP_BASE_URL: https://api.${BACKEND_HOST:?Falta BACKEND_HOST en .env.prod}
+
+  turnos:
+    depends_on: !override
+      gateway:
+        condition: service_healthy
+    environment:
+      MYSQL_HOST: ${MYSQL_HOST}
+      MYSQL_USER: ${MYSQL_USER:-admin}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?Falta MYSQL_PASSWORD en .env.prod}
+      MYSQL_USE_SSL: "true"
+      # USUARIOS_SERVICE_URL conserva el default interno http://gateway:8089/usuarios.
+
+  auth:
+    environment:
+      KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET:?Falta KEYCLOAK_CLIENT_SECRET en .env.prod}
+      # KEYCLOAK_URL conserva http://keycloak:8080 (red interna, sin TLS).
+
+  gateway:
+    environment:
+      # El iss del token lo pone el navegador -> URL pública de Keycloak.
+      KEYCLOAK_ISSUER_URI: https://auth.${BACKEND_HOST:?Falta BACKEND_HOST en .env.prod}/realms/MicroservicesBarber
+      # Las llaves se leen por red interna.
+      KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/MicroservicesBarber/protocol/openid-connect/certs
+      CORS_ALLOWED_ORIGIN: https://${FRONTEND_HOST:?Falta FRONTEND_HOST en .env.prod}
+
+  keycloak:
+    command: ["start", "--import-realm", "--proxy-headers=xforwarded", "--hostname=https://auth.${BACKEND_HOST:?Falta BACKEND_HOST en .env.prod}"]
+    volumes:
+      - keycloak_data:/opt/keycloak/data
+      - ./keycloak/realm-export.prod.json:/opt/keycloak/data/import/realm-export.json:ro

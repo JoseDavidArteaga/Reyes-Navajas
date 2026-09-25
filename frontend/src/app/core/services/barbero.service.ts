@@ -3,12 +3,13 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, of } from 'rxjs';
 import { tap, catchError } from 'rxjs/operators';
 import { Barbero, CreateBarberoRequest, UpdateBarberoRequest, ApiResponse, PaginatedResponse, EstadoBarbero, HorarioTrabajo } from '../interfaces';
+import { API_CONFIG } from '../config/api.config';
 
 @Injectable({
   providedIn: 'root'
 })
 export class BarberoService {
-  private readonly API_URL = 'http://localhost:8089/usuarios/barberos';
+  private readonly API_URL = API_CONFIG.ENDPOINTS.BARBEROS;
   private barberosSignal = signal<Barbero[]>([]);
   private isLoadingSignal = signal<boolean>(false);
 

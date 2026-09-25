@@ -14,7 +14,7 @@ spring:
               - "http://localhost:3000"
               - "http://localhost:4200"
               - "http://localhost:5173"
-              - "https://tu-dominio.com"
+              - "${CORS_ALLOWED_ORIGIN:https://tu-dominio.com}"
             allowedMethods:
               - GET
               - POST
@@ -32,7 +32,7 @@ spring:
         #  Microservicio de Catálogo
         # ----------------------------------
         - id: catalogo-service
-          uri: http://localhost:8083
+          uri: ${CATALOGO_URL:http://localhost:8083}
           predicates:
             - Path=/catalogo/**
 
@@ -40,7 +40,7 @@ spring:
         #  Microservicio de Turnos
         # ----------------------------------
         - id: turnos-service
-          uri: http://localhost:8088
+          uri: ${TURNOS_URL:http://localhost:8088}
           predicates:
             - Path=/turnos/**
 
@@ -48,7 +48,7 @@ spring:
         #  Microservicio de Usuarios
         # ----------------------------------
         - id: usuarios-service
-          uri: http://localhost:8085
+          uri: ${USUARIOS_URL:http://localhost:8085}
           predicates:
             - Path=/usuarios/**
           filters:
@@ -58,17 +58,17 @@ spring:
         #  Endpoints de Barberos (via Usuarios)
         # ----------------------------------
         - id: barberos-service
-          uri: http://localhost:8085
+          uri: ${USUARIOS_URL:http://localhost:8085}
           predicates:
             - Path=/barberos/**
           filters:
-             - RewritePath=/barberos/?(?<segment>.*), /usuarios/barberos/${segment}
+              - RewritePath=/barberos/?(?<segment>.*), /usuarios/barberos/${segment}
 
         # ----------------------------------
         #  Microservicio de Autenticación
         # ----------------------------------
         - id: auth-service
-          uri: http://localhost:8084
+          uri: ${AUTH_URL:http://localhost:8084}
           predicates:
             - Path=/auth/**
 
@@ -76,8 +76,14 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: http://localhost:8080/realms/MicroservicesBarber
-          jwk-set-uri: http://localhost:8080/realms/MicroservicesBarber/protocol/openid-connect/certs
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8080/realms/MicroservicesBarber}
+          jwk-set-uri: ${KEYCLOAK_JWK_SET_URI:http://localhost:8080/realms/MicroservicesBarber/protocol/openid-connect/certs}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
 
 logging:
   level:

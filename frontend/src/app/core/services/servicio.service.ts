@@ -3,14 +3,14 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, of } from 'rxjs';
 import { tap, catchError } from 'rxjs/operators';
 import { Servicio, CreateServicioRequest, UpdateServicioRequest, ApiResponse } from '../interfaces';
-// import { API_CONFIG } from '../config/api.config';
+import { API_CONFIG } from '../config/api.config';
 
 @Injectable({
   providedIn: 'root'
 })
 export class ServicioService {
-  // Usando URL directa como el resto de servicios
-  private readonly API_URL = 'http://localhost:8089/catalogo/servicios';
+  // Base del endpoint centralizada en API_CONFIG (ver config/api.config.ts)
+  private readonly API_URL = `${API_CONFIG.ENDPOINTS.CATALOGO}/servicios`;
   private serviciosSignal = signal<Servicio[]>([]);
   private isLoadingSignal = signal<boolean>(false);
 

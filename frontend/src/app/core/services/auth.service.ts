@@ -4,6 +4,7 @@ import { Router } from '@angular/router';
 import { Observable, BehaviorSubject, of } from 'rxjs';
 import { map, tap, catchError } from 'rxjs/operators';
 import { Usuario, UserRole, LoginRequest, LoginResponse, RegisterRequest, ApiResponse } from '../interfaces';
+import { API_CONFIG } from '../config/api.config';
 
 @Injectable({
   providedIn: 'root'
@@ -11,8 +12,8 @@ import { Usuario, UserRole, LoginRequest, LoginResponse, RegisterRequest, ApiRes
 export class AuthService {
   private readonly TOKEN_KEY = 'auth_token';
   private readonly USER_KEY = 'current_user';
-  private readonly KEYCLOAK_TOKEN_URL = 'http://localhost:8080/realms/MicroservicesBarber/protocol/openid-connect/token';
-  private readonly KEYCLOAK_CLIENT_ID = 'barber-service';
+  private readonly KEYCLOAK_TOKEN_URL = API_CONFIG.ENDPOINTS.AUTH.LOGIN;
+  private readonly KEYCLOAK_CLIENT_ID = API_CONFIG.KEYCLOAK_CLIENT_ID;
   private readonly ACCESS_TOKEN_KEY = 'access_token';
   private readonly REFRESH_TOKEN_KEY = 'refresh_token';
   private readonly TOKEN_EXPIRES_AT_KEY = 'access_token_expires_at';
@@ -146,7 +147,7 @@ export class AuthService {
 
     // Enviar a API Gateway (puerto 8089)
     return this.http.post<any>(
-      'http://localhost:8089/usuarios/registro', 
+      API_CONFIG.ENDPOINTS.AUTH.REGISTER,
       requestData
     ).pipe(
       tap((response) => {
@@ -220,7 +221,7 @@ export class AuthService {
       return of(true); // Si no es barbero, siempre está "activo"
     }
 
-    return this.http.get<any>(`http://localhost:8089/usuarios/name/${usuario.nombre}`).pipe(
+    return this.http.get<any>(`${API_CONFIG.ENDPOINTS.USUARIOS}/name/${usuario.nombre}`).pipe(
       map(response => {
         // Actualizar la información del usuario con el estado actual
         if (response && typeof response.estado !== 'undefined') {
@@ -240,7 +241,7 @@ export class AuthService {
 
   // Verificar disponibilidad de teléfono
   verificarTelefonoDisponible(telefono: string): Observable<boolean> {
-    return this.http.get(`http://localhost:8089/usuarios/verificar-telefono/${telefono}`).pipe(
+    return this.http.get(`${API_CONFIG.ENDPOINTS.USUARIOS}/verificar-telefono/${telefono}`).pipe(
       map(() => true), // Si no hay error, el teléfono está disponible
       catchError(error => {
         if (error.status === 409) {

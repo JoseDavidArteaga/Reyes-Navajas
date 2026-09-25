@@ -3,12 +3,13 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
+import { API_CONFIG } from '../config/api.config';
 
 @Injectable({
   providedIn: 'root'
 })
 export class UserService {
-  private apiUrl = 'http://localhost:8089/usuarios/name';
+  private apiUrl = `${API_CONFIG.ENDPOINTS.USUARIOS}/name`;
 
   constructor(private http: HttpClient) {}
 

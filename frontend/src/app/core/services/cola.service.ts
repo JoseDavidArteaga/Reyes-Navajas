@@ -3,13 +3,16 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, of } from 'rxjs';
 import { tap } from 'rxjs/operators';
 import { ColaVirtual, UnirseColaRequest, EstadoCola, ApiResponse } from '../interfaces';
+import { API_CONFIG } from '../config/api.config';
 import { AuthService } from './auth.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class ColaService {
-  private readonly API_URL = 'http://localhost:8080/api/cola';
+  // NOTA: endpoint sin usar (todos los métodos operan sobre mocks en memoria).
+  // Se mantiene centralizado en API_CONFIG para no quemar localhost.
+  private readonly API_URL = `${API_CONFIG.KEYCLOAK_URL}/api/cola`;
   private colaSignal = signal<ColaVirtual[]>([]);
   private miPosicionSignal = signal<ColaVirtual | null>(null);
   private isLoadingSignal = signal<boolean>(false);

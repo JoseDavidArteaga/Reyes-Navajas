@@ -6,16 +6,16 @@ spring:
     name: auth-microservice
 
   rabbitmq:
-    host: localhost
-    port: 5672
-    username: guest
-    password: guest
+    host: ${RABBIT_HOST:localhost}
+    port: ${RABBIT_PORT:5672}
+    username: ${RABBIT_USER:guest}
+    password: ${RABBIT_PASSWORD:guest}
 
 keycloak:
-  auth-server-url: http://localhost:8080
-  realm: MicroservicesBarber
-  client-id: auth-service
-  client-secret: PL8IqDY9NnSpW7kMGH7DWSPv29fjdx2X
+  auth-server-url: ${KEYCLOAK_URL:http://localhost:8080}
+  realm: ${KEYCLOAK_REALM:MicroservicesBarber}
+  client-id: ${KEYCLOAK_CLIENT_ID:auth-service}
+  client-secret: ${KEYCLOAK_CLIENT_SECRET:PL8IqDY9NnSpW7kMGH7DWSPv29fjdx2X}
 
 management:
   endpoints:

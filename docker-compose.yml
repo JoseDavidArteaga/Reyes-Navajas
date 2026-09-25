@@ -1,0 +1,221 @@
+name: reyes-navajas
+
+networks:
+  barberia-net:
+    driver: bridge
+
+volumes:
+  mysql_data:
+  rabbitmq_data:
+  keycloak_data:
+  catalogo_uploads:
+
+services:
+  # ---------- Infraestructura ----------
+  mysql:
+    image: mysql:8.0.42
+    container_name: rn-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+    ports:
+      - "${MYSQL_PORT:-3306}:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./docker/mysql-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${MYSQL_ROOT_PASSWORD:-root}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - barberia-net
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: rn-rabbitmq
+    restart: unless-stopped
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - barberia-net
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:24.0.5
+    container_name: rn-keycloak
+    restart: unless-stopped
+    command: ["start-dev", "--import-realm"]
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN:-admin}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN:-admin}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
+    ports:
+      - "8080:8080"
+    volumes:
+      - keycloak_data:/opt/keycloak/data
+      - ./keycloak/realm-export.json:/opt/keycloak/data/import/realm-export.json:ro
+    networks:
+      - barberia-net
+
+  # ---------- Microservicios ----------
+  usuarios:
+    build: ./microUsuarios
+    container_name: rn-usuarios
+    restart: unless-stopped
+    ports:
+      - "8085:8085"
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_DB_USUARIOS: barberia
+      MYSQL_USER: root
+      MYSQL_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+      RABBIT_HOST: rabbitmq
+      RABBIT_PORT: 5672
+      RABBIT_USER: guest
+      RABBIT_PASSWORD: guest
+    depends_on:
+      mysql:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      keycloak:
+        condition: service_started
+    networks:
+      - barberia-net
+
+  auth:
+    build: ./microAutenticacion
+    container_name: rn-auth
+    restart: unless-stopped
+    ports:
+      - "8084:8084"
+    environment:
+      RABBIT_HOST: rabbitmq
+      RABBIT_PORT: 5672
+      RABBIT_USER: guest
+      RABBIT_PASSWORD: guest
+      KEYCLOAK_URL: http://keycloak:8080
+      KEYCLOAK_REALM: MicroservicesBarber
+      KEYCLOAK_CLIENT_ID: auth-service
+      KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET:-PL8IqDY9NnSpW7kMGH7DWSPv29fjdx2X}
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      keycloak:
+        condition: service_started
+    networks:
+      - barberia-net
+
+  catalogo:
+    build: ./microCatalogo
+    container_name: rn-catalogo
+    restart: unless-stopped
+    ports:
+      - "8083:8083"
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_DB_CATALOGO: catalogo_db
+      MYSQL_USER: root
+      MYSQL_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+      RABBIT_HOST: rabbitmq
+      RABBIT_PORT: 5672
+      RABBIT_USER: guest
+      RABBIT_PASSWORD: guest
+      APP_UPLOAD_DIR: /app/uploads/servicios
+    volumes:
+      - catalogo_uploads:/app/uploads
+    depends_on:
+      mysql:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - barberia-net
+
+  turnos:
+    build: ./microServiceTurnos
+    container_name: rn-turnos
+    restart: unless-stopped
+    ports:
+      - "8088:8088"
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_DB_TURNOS: turnos_db
+      MYSQL_USER: root
+      MYSQL_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+      USUARIOS_SERVICE_URL: http://gateway:8089/usuarios
+    depends_on:
+      mysql:
+        condition: service_healthy
+      gateway:
+        condition: service_healthy
+    networks:
+      - barberia-net
+
+  notificaciones:
+    build: ./microNotificaciones
+    container_name: rn-notificaciones
+    restart: unless-stopped
+    ports:
+      - "8091:8091"
+    environment:
+      RABBIT_HOST: rabbitmq
+      RABBIT_PORT: 5672
+      RABBIT_USER: guest
+      RABBIT_PASSWORD: guest
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - barberia-net
+
+  gateway:
+    build: ./apiGateway
+    container_name: rn-gateway
+    restart: unless-stopped
+    ports:
+      - "8089:8089"
+    environment:
+      CATALOGO_URL: http://catalogo:8083
+      TURNOS_URL: http://turnos:8088
+      USUARIOS_URL: http://usuarios:8085
+      AUTH_URL: http://auth:8084
+      # El iss del token lo pone el navegador (localhost), las llaves se leen internas
+      KEYCLOAK_ISSUER_URI: http://localhost:8080/realms/MicroservicesBarber
+      KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/MicroservicesBarber/protocol/openid-connect/certs
+    depends_on:
+      usuarios:
+        condition: service_healthy
+      auth:
+        condition: service_healthy
+      catalogo:
+        condition: service_healthy
+    networks:
+      - barberia-net
+
+  # ---------- Frontend ----------
+  frontend:
+    build: ./frontend
+    container_name: rn-frontend
+    restart: unless-stopped
+    ports:
+      - "4200:80"
+    depends_on:
+      gateway:
+        condition: service_healthy
+    networks:
+      - barberia-net

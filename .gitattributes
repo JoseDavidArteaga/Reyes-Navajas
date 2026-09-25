@@ -1,0 +1,3 @@
+# Los scripts de aprovisionamiento deben conservar LF aunque se clonen en Windows,
+# porque se ejecutan con bash en la VM Ubuntu (CRLF rompería el shebang y el parseo).
+deploy/*.sh text eol=lf

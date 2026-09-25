@@ -235,7 +235,7 @@ export class ReservaService {
 
   marcarNoAsistio(id: string): Observable<ApiResponse<Reserva>> {
     this.isLoadingSignal.set(true);
-    const url = `http://localhost:8089/api/reservas/${id}/no-asistio`;
+    const url = `${API_CONFIG.GATEWAY_URL}/api/reservas/${id}/no-asistio`;
     return this.http.post<ApiResponse<Reserva>>(url, {}).pipe(
       tap(response => {
         if (response.success) {

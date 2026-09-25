@@ -6,12 +6,18 @@ spring:
     name: microNotificacion
 
   rabbitmq:
-    host: localhost
-    port: 5672
-    username: guest
-    password: guest
+    host: ${RABBIT_HOST:localhost}
+    port: ${RABBIT_PORT:5672}
+    username: ${RABBIT_USER:guest}
+    password: ${RABBIT_PASSWORD:guest}
 
 twilio:
-  account-sid: xx
-  auth-token: xx
-  from-number: xx
+  account-sid: ${TWILIO_SID:xx}
+  auth-token: ${TWILIO_TOKEN:xx}
+  from-number: ${TWILIO_FROM:xx}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

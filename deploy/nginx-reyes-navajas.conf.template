@@ -1,0 +1,45 @@
+# Template Nginx para la VM OCI (Opción A). Lo instala vm-setup.sh con sed.
+# Marcador: BACKEND_HOST = slug nip.io de la IP pública, p. ej. 80-90-100-110.nip.io
+#
+# - api.<BACKEND_HOST>  -> API Gateway (localhost:8089)
+# - auth.<BACKEND_HOST> -> Keycloak   (localhost:8080)
+# TLS lo añade certbot --nginx (paso posterior del setup). Este archivo es solo HTTP;
+# certbot crea los bloques 443 y el redirect. No editar a mano en la VM.
+
+# --- API Gateway ---
+server {
+    listen 80;
+    server_name api.BACKEND_HOST;
+
+    # Subidas de imágenes del catálogo (límite del micro: 2MB; margen de sobra)
+    client_max_body_size 10M;
+
+    location / {
+        proxy_pass http://127.0.0.1:8089;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 120s;
+    }
+}
+
+# --- Keycloak ---
+# Requiere X-Forwarded-* (el compose usa --proxy-headers=xforwarded).
+server {
+    listen 80;
+    server_name auth.BACKEND_HOST;
+
+    client_max_body_size 10M;
+
+    location / {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 120s;
+        # Sin buffering agresivo: la consola admin de Keycloak usa SSE/long-poll
+        proxy_buffering off;
+    }
+}

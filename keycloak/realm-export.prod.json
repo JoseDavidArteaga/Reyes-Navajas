@@ -1,0 +1,108 @@
+{
+  "realm": "MicroservicesBarber",
+  "enabled": true,
+  "displayName": "Barberia Reyes Navajas",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": false,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": false,
+  "roles": {
+    "realm": [
+      { "name": "ADMINISTRADOR", "description": "Administrador de la barberia" },
+      { "name": "BARBERO", "description": "Barbero" },
+      { "name": "CLIENTE", "description": "Cliente" }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "barber-service",
+      "name": "Barber frontend",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": false,
+      "redirectUris": ["https://reyes-navajas.vercel.app/*"],
+      "webOrigins": ["https://reyes-navajas.vercel.app"],
+      "attributes": { "pkce.code.challenge.method": "S256" }
+    },
+    {
+      "clientId": "auth-service",
+      "name": "Auth microservice",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "secret": "PL8IqDY9NnSpW7kMGH7DWSPv29fjdx2X",
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": true
+    }
+  ],
+  "users": [
+    {
+      "username": "jefe",
+      "enabled": true,
+      "firstName": "Jefe",
+      "lastName": "Admin",
+      "attributes": { "telefono": ["3150001111"] },
+      "credentials": [{ "type": "password", "value": "admin123", "temporary": false }],
+      "realmRoles": ["ADMINISTRADOR"]
+    },
+    {
+      "username": "jesus",
+      "enabled": true,
+      "firstName": "Jesus",
+      "lastName": "Barbero",
+      "attributes": { "telefono": ["3156890634"] },
+      "credentials": [{ "type": "password", "value": "admin123", "temporary": false }],
+      "realmRoles": ["BARBERO"]
+    },
+    {
+      "username": "carlos",
+      "enabled": true,
+      "firstName": "Carlos",
+      "lastName": "Barbero",
+      "attributes": { "telefono": ["3152223344"] },
+      "credentials": [{ "type": "password", "value": "admin123", "temporary": false }],
+      "realmRoles": ["BARBERO"]
+    },
+    {
+      "username": "juan",
+      "enabled": true,
+      "firstName": "Juan",
+      "lastName": "Cliente",
+      "attributes": { "telefono": ["3154445566"] },
+      "credentials": [{ "type": "password", "value": "admin123", "temporary": false }],
+      "realmRoles": ["CLIENTE"]
+    },
+    {
+      "username": "mateo",
+      "enabled": true,
+      "firstName": "Mateo",
+      "lastName": "Cliente",
+      "attributes": { "telefono": ["3157778899"] },
+      "credentials": [{ "type": "password", "value": "admin123", "temporary": false }],
+      "realmRoles": ["CLIENTE"]
+    },
+    {
+      "username": "andres",
+      "enabled": true,
+      "firstName": "Andres",
+      "lastName": "Cliente",
+      "attributes": { "telefono": ["3161234567"] },
+      "credentials": [{ "type": "password", "value": "admin123", "temporary": false }],
+      "realmRoles": ["CLIENTE"]
+    },
+    {
+      "username": "felipe",
+      "enabled": true,
+      "firstName": "Felipe",
+      "lastName": "Cliente",
+      "attributes": { "telefono": ["3169876543"] },
+      "credentials": [{ "type": "password", "value": "admin123", "temporary": false }],
+      "realmRoles": ["CLIENTE"]
+    }
+  ]
+}
